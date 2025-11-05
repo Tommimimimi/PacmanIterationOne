@@ -36,6 +36,10 @@ namespace PacmanIterationOne
             intPlayerSpeed,
             intMazeX,
             intMazeY,
+            intScore,
+            R,
+            G,
+            B,
             intCellSize = 40;
 
         //declare current and next direction variables
@@ -50,19 +54,17 @@ namespace PacmanIterationOne
         Rectangle rectPlayer;
 
         List<Ghost> listGhosts = new List<Ghost>();
-
-        int R;
-        int G;
-        int B;
         Brush brush = new SolidBrush(Color.FromArgb(200, 20, 20, 20));
 
         float fltMouthAngle = 0;
 
         Stopwatch swMouthTime = new Stopwatch();
+        Label lblScore = new Label();
 
         public Form1()
         {
             InitializeComponent();
+            this.MaximizeBox = false;
 
             //choose random numbers for maze size
             intMazeX = rnd.Next(11, 14);
@@ -87,6 +89,12 @@ namespace PacmanIterationOne
             listGhosts.Add(new Ghost(100, 100, Color.Cyan, arrMaze, intCellSize));
             listGhosts.Add(new Ghost(200, 200, Color.Orange, arrMaze, intCellSize));
 
+            //creating the label and setting attributes
+            lblScore.Location = new Point(ClientSize.Width - lblScore.Width * 2, 0);
+            lblScore.Size = new Size(intCellSize * 10, intCellSize);
+            lblScore.Font = new Font("Comic Sans MS", 20);
+            lblScore.BackColor = Color.Transparent;
+            this.Controls.Add(lblScore);
 
             //create and start game loop thread
             thrdGameLoop = new Thread(GameLoop);
@@ -300,9 +308,11 @@ namespace PacmanIterationOne
             {
                 ghost.Draw(g);
             }
+            lblScore.Text = "Score: " + Convert.ToString(intScore);
         }
         private void MovePlayer()
         {
+
             //movement attempt variables
             int tryX = intPlayerX;
             int tryY = intPlayerY;
@@ -381,7 +391,7 @@ namespace PacmanIterationOne
         private bool IsValidMove(int newX, int newY)
         {
             //test rectangle for collision
-            Rectangle newPlayerRect = new Rectangle(newX, newY, rectPlayer.Width, rectPlayer.Height);
+            Rectangle rectNewPlayer = new Rectangle(newX, newY, rectPlayer.Width, rectPlayer.Height);
 
             //goes through every cell wall and
             //creates a rectangle for every one
@@ -394,9 +404,22 @@ namespace PacmanIterationOne
                         Rectangle mazeWall = new Rectangle(col * intCellSize, row * intCellSize, intCellSize, intCellSize);
                         //using IntersectsWith method to check for collision
                         //returning IsValidMove as false if the intersect is true
-                        if (newPlayerRect.IntersectsWith(mazeWall))
+                        if (rectNewPlayer.IntersectsWith(mazeWall))
                         {
                             return false;
+                        }
+                    }
+                    else if (arrMaze[row, col] == 2)
+                    {
+                        Rectangle pellet = new Rectangle(col * intCellSize + (intCellSize / 5 * 2),
+                            row * intCellSize + (intCellSize / 5 * 2),
+                            intCellSize / 5, intCellSize / 5);
+                        //using IntersectsWith method to check for collision
+                        //returning IsValidMove as false if the intersect is true
+                        if (rectNewPlayer.IntersectsWith(pellet))
+                        {
+                            arrMaze[row, col] = 0;
+                            intScore += 10;
                         }
                     }
                 }
@@ -408,6 +431,126 @@ namespace PacmanIterationOne
             //if none of the checks are activated
             //then it is returned as a valid move
             return true;
+        }
+        //allows for an input of an entities current position
+        //and then destination, returning the point of the next tile.
+        private Point GetNextTileBFS(Point paraStart, Point paraEnd)
+        {
+            //stores visited cells as booleans in a 2 dimensional array
+            //visited cells marked true
+            bool[,] arrVisitedCells = new bool[intMazeX, intMazeY];
+
+            //does the same but stores parent points
+            //helps reconstruct paths
+            Point[,] pntArrOrigin = new Point[intMazeX, intMazeY];
+
+            //the queue for the travel of the fastest path
+            Queue<Point> pntQueue = new Queue<Point>();
+
+
+            //queues the start point then marks it as visited
+            pntQueue.Enqueue(paraStart);
+            arrVisitedCells[paraStart.Y, paraStart.X] = true;
+
+            //defines the different directions using points, which
+            //i can then use to add to the current position to check
+            Point[] directions = { new Point(0, -1), new Point(0, 1), new Point(-1, 0), new Point(1, 0) };
+
+            //loops until all directions are explored
+            while (pntQueue.Count > 0)
+            {
+                //dequeue current point then check if the current point has reached the end
+                Point pntCurrent = pntQueue.Dequeue();
+
+                if (pntCurrent == paraEnd)
+                {
+                    //backtrack to find first step then
+                    //follows the origin chain using this
+                    Point pntStep = paraEnd;
+                    while (pntArrOrigin[pntStep.Y, pntStep.X] != paraStart)
+                    {
+                        pntStep = pntArrOrigin[pntStep.Y, pntStep.X];
+                    }
+                    //returns first move
+                    return pntStep;
+                }
+                //goes through each direction
+                foreach (Point p in directions)
+                {
+                    //create test values using each points X and Y value(0, 1, -1)
+                    int intStepX = pntCurrent.X + p.X;
+                    int intStepY = pntCurrent.Y + p.Y;
+
+                    //checks that the cell is not visited and is not a wall
+                    if (!arrVisitedCells[intStepY, intStepX] && arrMaze[intStepY, intStepX] == 0)
+                    {
+                        //marks cell as visited
+                        arrVisitedCells[intStepY, intStepX] = true;
+                        //store current point as origin
+                        pntArrOrigin[intStepY, intStepX] = pntCurrent;
+                        //creates new point for exploration
+                        pntQueue.Enqueue(new Point(intStepX, intStepY));
+                    }
+                }
+            }
+            //if path not found returns back to the start (no move)
+            return paraStart;
+        }
+
+        private int BreadthDifference(int paraValueOne, int paraValueTwo)
+        {
+            //returns distance between greatest point and lowest point ensuring that
+            //a positive value will be returned(due to neither coordinates being negative)
+            if (paraValueOne > paraValueTwo)
+                return paraValueOne - paraValueTwo;
+            return paraValueTwo - paraValueOne;
+
+        }
+
+        private int MoveTowards(int current, int target, int speed)
+        {
+            //checks if current is more left/above target
+            if (current < target)
+            {
+                int next = current + speed;
+
+                if (next > target) return target;
+                return next;
+            }
+
+            //checks if current is more right/below target
+            else if (current > target)
+            {
+                int next = current - speed;
+
+                if (next < target) return target;
+                return next;
+            }
+            //otherwise the current position = target thus will remain
+            return current;
+        }
+        private void MoveObjToTarget(Rectangle paraObject, Rectangle paraTarget, int paraPursuerSpeed, Point paraTargetPosition)
+        {
+            
+            //calculate how far away enemy is in both X and Y coordinates
+            if (BreadthDifference(paraObject.X, paraTargetPosition.X) < paraPursuerSpeed &&
+                BreadthDifference(paraObject.Y, paraTargetPosition.Y) < paraPursuerSpeed)
+            {
+                //creates points for both enemy and player
+                Point enemyCell = new Point(paraObject.X / intCellSize, paraObject.Y / intCellSize);
+                Point playerCell = new Point(paraTarget.X / intCellSize, paraTarget.Y / intCellSize);
+
+                //creates point for enemy to move to using current fastest path
+                Point nextCell = GetNextTileBFS(enemyCell, playerCell);
+
+                //sets target as the new cell, makes sure they can only move on snaps
+                paraTargetPosition = new Point(nextCell.X * intCellSize, nextCell.Y * intCellSize);
+            }
+
+            //if nothings changes enemy continues moving towards player
+            paraObject.X = MoveTowards(paraObject.X, paraTargetPosition.X, paraPursuerSpeed);
+            paraObject.Y = MoveTowards(paraObject.Y, paraTargetPosition.Y, paraPursuerSpeed);
+            
         }
 
         private void GameLoop()
