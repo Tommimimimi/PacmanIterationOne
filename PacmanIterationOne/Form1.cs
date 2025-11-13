@@ -43,6 +43,7 @@ namespace pIterationOne
             B,
             intCellSize = 40,
             intArrayOfStrLen = 60,
+            intGhostPhaCount,
             intDisposeCount;
 
         //declare current and next direction variables
@@ -56,6 +57,7 @@ namespace pIterationOne
 
         Thread thrdGameLoop;
         Thread thrdGarbageDispose;
+        Thread thrdGhostPhases;
         Rectangle rectPlayer;
 
         List<Ghost> listGhosts = new List<Ghost>();
@@ -66,6 +68,7 @@ namespace pIterationOne
         Stopwatch swMouthTime = new Stopwatch();
         Label lblScore = new Label();
         bool threadRunning = true;
+        bool boolChase = true;
         Label lblInterface;
         Form Interface = new Form();
         Queue<string> interfaceStrings;
@@ -95,10 +98,10 @@ namespace pIterationOne
             rectPlayer = new Rectangle(intPlayerX, intPlayerY, intCellSize, intCellSize);
 
             //create the four ghosts
-            listGhosts.Add(new Ghost(intCellSize * 3, intCellSize, Color.Red, arrMaze, intCellSize, "Blinky", this, new Point(1, 1)));
-            listGhosts.Add(new Ghost(intCellSize, intCellSize * intMazeX - 2 * intCellSize, Color.Pink, arrMaze, intCellSize, "Pinky", this, new Point(1, 1)));
-            listGhosts.Add(new Ghost(intMazeY * intCellSize - 2 * intCellSize, intCellSize, Color.Cyan, arrMaze, intCellSize, "Inky", this, new Point(1, 1)));
-            listGhosts.Add(new Ghost(intMazeY * intCellSize - 2 * intCellSize, intMazeX * intCellSize - 2 * intCellSize, Color.Orange, arrMaze, intCellSize, "Clyde", this, new Point(1, 1)));
+            listGhosts.Add(new Ghost(intCellSize * 3, intCellSize, Color.Red, arrMaze, intCellSize, "Blinky", this, new Point(1, 1), Ghost.Phases.Chase));
+            listGhosts.Add(new Ghost(intCellSize, intCellSize * intMazeX - 2 * intCellSize, Color.Pink, arrMaze, intCellSize, "Pinky", this, new Point(1, 1), Ghost.Phases.Chase));
+            listGhosts.Add(new Ghost(intMazeY * intCellSize - 2 * intCellSize, intCellSize, Color.Cyan, arrMaze, intCellSize, "Inky", this, new Point(1, 1), Ghost.Phases.Chase));
+            listGhosts.Add(new Ghost(intMazeY * intCellSize - 2 * intCellSize, intMazeX * intCellSize - 2 * intCellSize, Color.Orange, arrMaze, intCellSize, "Clyde", this, new Point(1, 1), Ghost.Phases.Chase));
 
             //creating the label and setting attributes
             lblScore.Location = new Point(ClientSize.Width - lblScore.Width * 2, 0);
@@ -113,6 +116,9 @@ namespace pIterationOne
 
             thrdGarbageDispose = new Thread(DisposeGarbage);
             thrdGarbageDispose.Start();
+
+            thrdGhostPhases = new Thread(PhaseSwitch);
+            thrdGhostPhases.Start();
 
             this.Location = new Point(Screen.FromControl(this).Bounds.Right - this.Width, 0);
 
@@ -564,88 +570,128 @@ namespace pIterationOne
             }
         }
 
-
-
-
-
         private void UpdateGhostChasePoints()
         {
             // Player's tile
             Point playerTile = new Point(intPlayerX / intCellSize, intPlayerY / intCellSize);
-
             foreach (Ghost ghost in listGhosts)
             {
-                switch (ghost.name)
+                switch (ghost.currPhase)
                 {
-                    case "Blinky":
-                        // Direct chase
-                        ghost.chasePoint = playerTile;
+                    case Ghost.Phases.Chase:
+                        switch (ghost.name)
+                        {
+                            case "Blinky":
+                                // Direct chase
+                                ghost.chasePoint = playerTile;
+                                break;
+
+                            case "Pinky":
+                                Point pinkyTarget = playerTile;
+                                switch (dirCurrent)
+                                {
+                                    case Direction.Up: pinkyTarget.Y -= 4; break;
+                                    case Direction.Down: pinkyTarget.Y += 4; break;
+                                    case Direction.Left: pinkyTarget.X -= 4; break;
+                                    case Direction.Right: pinkyTarget.X += 4; break;
+                                }
+                                // Clamp to maze bounds
+                                pinkyTarget.X = Math.Clamp(pinkyTarget.X, 0, intMazeY - 1);
+                                pinkyTarget.Y = Math.Clamp(pinkyTarget.Y, 0, intMazeX - 1);
+                                ghost.chasePoint = pinkyTarget;
+                                break;
+
+                            case "Inky":
+                                Point vectorTarget = playerTile;
+                                switch (dirCurrent)
+                                {
+                                    case Direction.Up: vectorTarget.Y -= 2; break;
+                                    case Direction.Down: vectorTarget.Y += 2; break;
+                                    case Direction.Left: vectorTarget.X -= 2; break;
+                                    case Direction.Right: vectorTarget.X += 2; break;
+                                }
+
+                                // Find Blinky
+                                Ghost blinky = listGhosts.Find(g => g.name == "Blinky");
+                                if (blinky != null)
+                                {
+                                    int targetX = vectorTarget.X + (vectorTarget.X - (blinky.X / intCellSize));
+                                    int targetY = vectorTarget.Y + (vectorTarget.Y - (blinky.Y / intCellSize));
+
+                                    // Clamp to maze bounds
+                                    targetX = Math.Clamp(targetX, 0, intMazeY - 1);
+                                    targetY = Math.Clamp(targetY, 0, intMazeX - 1);
+
+                                    ghost.chasePoint = new Point(targetX, targetY);
+                                }
+                                else
+                                {
+                                    ghost.chasePoint = vectorTarget;
+                                }
+                                break;
+
+                            case "Clyde":
+                                int distX = Math.Abs(ghost.X / intCellSize - playerTile.X);
+                                int distY = Math.Abs(ghost.Y / intCellSize - playerTile.Y);
+                                if (distX + distY > 8)
+                                {
+                                    ghost.chasePoint = playerTile;
+                                }
+                                else
+                                {
+                                    ghost.chasePoint = new Point(1, intMazeX - 2);
+                                }
+                                break;
+                        }
+                        break;
+                    case Ghost.Phases.Scatter:
+                        switch (ghost.name)
+                        {
+                            case "Blinky":
+                                ghost.chasePoint = new Point(intMazeY - 3, 1);
+                                break;
+
+                            case "Pinky":
+                                ghost.chasePoint = new Point(1, 1);
+                                break;
+
+                            case "Inky":
+                                ghost.chasePoint = new Point(intMazeY - 2, intMazeX - 2);
+                                break;
+
+                            case "Clyde":
+                                ghost.chasePoint = playerTile;
+                                break;
+                        }
                         break;
 
-                    case "Pinky":
-                        Point pinkyTarget = playerTile;
-                        switch (dirCurrent)
-                        {
-                            case Direction.Up: pinkyTarget.Y -= 4; break;
-                            case Direction.Down: pinkyTarget.Y += 4; break;
-                            case Direction.Left: pinkyTarget.X -= 4; break;
-                            case Direction.Right: pinkyTarget.X += 4; break;
-                        }
-                        // Clamp to maze bounds
-                        pinkyTarget.X = Math.Clamp(pinkyTarget.X, 0, intMazeY - 1);
-                        pinkyTarget.Y = Math.Clamp(pinkyTarget.Y, 0, intMazeX - 1);
-                        ghost.chasePoint = pinkyTarget;
-                        break;
-
-                    case "Inky":
-                        Point vectorTarget = playerTile;
-                        switch (dirCurrent)
-                        {
-                            case Direction.Up: vectorTarget.Y -= 2; break;
-                            case Direction.Down: vectorTarget.Y += 2; break;
-                            case Direction.Left: vectorTarget.X -= 2; break;
-                            case Direction.Right: vectorTarget.X += 2; break;
-                        }
-
-                        // Find Blinky
-                        Ghost blinky = listGhosts.Find(g => g.name == "Blinky");
-                        if (blinky != null)
-                        {
-                            int targetX = vectorTarget.X + (vectorTarget.X - (blinky.X / intCellSize));
-                            int targetY = vectorTarget.Y + (vectorTarget.Y - (blinky.Y / intCellSize));
-
-                            // Clamp to maze bounds
-                            targetX = Math.Clamp(targetX, 0, intMazeY - 1);
-                            targetY = Math.Clamp(targetY, 0, intMazeX - 1);
-
-                            ghost.chasePoint = new Point(targetX, targetY);
-                        }
-                        else
-                        {
-                            ghost.chasePoint = vectorTarget;
-                        }
-                        break;
-
-                    case "Clyde":
-                        int distX = Math.Abs(ghost.X / intCellSize - playerTile.X);
-                        int distY = Math.Abs(ghost.Y / intCellSize - playerTile.Y);
-                        if (distX + distY > 8)
-                        {
-                            ghost.chasePoint = playerTile;
-                        }
-                        else
-                        {
-                            ghost.chasePoint = new Point(1, intMazeX - 2);
-                        }
-                        break;
                 }
+
             }
         }
 
+        private void SwitchGhostPhase()
+        {
 
+            foreach (Ghost ghost in listGhosts)
+            {
+                switch (ghost.currPhase)
+                {
+                    case Ghost.Phases.Chase:
+                        ghost.currPhase = Ghost.Phases.Scatter;
+                        boolChase = true;
+                        AddStringToQueue($"{ghost.name} phase is now {ghost.currPhase} at {DateTime.Now.ToLongTimeString()}");
+                        break;
 
+                    case Ghost.Phases.Scatter:
+                        ghost.currPhase = Ghost.Phases.Chase;
+                        boolChase = false;
+                        AddStringToQueue($"{ghost.name} phase is now {ghost.currPhase} at {DateTime.Now.ToLongTimeString()}");
+                        break;
 
-
+                }
+            }
+        }
 
         public void AddStringToQueue(string pStr)
         {
@@ -680,6 +726,27 @@ namespace pIterationOne
                 }
             }
         }
+
+        public void PhaseSwitch()
+        {
+            while (threadRunning)
+            {
+                Thread.Sleep(100);
+                intGhostPhaCount++;
+
+                if (boolChase && intGhostPhaCount >= 70)
+                {
+                    SwitchGhostPhase();
+                    intGhostPhaCount = 0;
+                }
+                else if (!boolChase && intGhostPhaCount >= 200)
+                {
+                    SwitchGhostPhase();
+                    intGhostPhaCount = 0;
+                }
+            }
+        }
+
 
         private void GameLoop()
         {

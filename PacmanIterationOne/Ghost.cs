@@ -15,8 +15,14 @@ public class Ghost
     private int[,] maze;
     private int cellSize;
     private Form1 form;
+    public enum Phases
+    {
+        Chase,
+        Scatter
+    }
+    public Phases currPhase;
 
-    public Ghost(int startX, int startY, Color c, int[,] mazeArr, int cellSize, string name, Form1 f, Point initialChase)
+    public Ghost(int startX, int startY, Color c, int[,] mazeArr, int cellSize, string name, Form1 f, Point initialChase, Phases pCurrPhase)
     {
         this.X = startX;
         this.Y = startY;
@@ -32,6 +38,7 @@ public class Ghost
         this.chasePoint = initialChase;
         this.nextTile = new Point(X / cellSize, Y / cellSize);
         this.dirCurrent = Direction.None;
+        this.currPhase = pCurrPhase;
     }
 
     public void UpdateRectangle()
