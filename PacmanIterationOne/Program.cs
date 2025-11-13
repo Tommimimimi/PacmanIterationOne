@@ -1,4 +1,4 @@
-namespace PacmanIterationOne
+namespace pIterationOne
 {
     internal static class Program
     {

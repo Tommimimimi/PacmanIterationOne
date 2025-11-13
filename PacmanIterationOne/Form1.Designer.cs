@@ -1,4 +1,4 @@
-﻿namespace PacmanIterationOne
+﻿namespace pIterationOne
 {
     partial class Form1
     {
@@ -37,7 +37,8 @@
             ClientSize = new Size(800, 450);
             Name = "Form1";
             Text = "Form1";
-            KeyDown += Form1_KeyDown;
+            FormClosing += CloseForm;
+            KeyDown += KeyDownEvent;
             ResumeLayout(false);
         }
 

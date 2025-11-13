@@ -3,8 +3,9 @@ using System;
 using System.Runtime.CompilerServices;
 using System.Numerics;
 using System.Diagnostics;
+using pIterationOne;
 
-namespace PacmanIterationOne
+namespace pIterationOne
 {
     //define different directions as named constants in enum
     public enum Direction
@@ -15,7 +16,7 @@ namespace PacmanIterationOne
         Right,
         None
     }
-    
+
     public partial class Form1 : Form
     {
         public Dictionary<Direction, float> directionAngle = new()
@@ -40,17 +41,21 @@ namespace PacmanIterationOne
             R,
             G,
             B,
-            intCellSize = 40;
+            intCellSize = 40,
+            intArrayOfStrLen = 60,
+            intDisposeCount;
 
         //declare current and next direction variables
-        static Direction 
+        static Direction
         dirCurrent = Direction.None,
         dirNext = Direction.None;
 
         Random rnd = new Random();
 
         //create system resources
+
         Thread thrdGameLoop;
+        Thread thrdGarbageDispose;
         Rectangle rectPlayer;
 
         List<Ghost> listGhosts = new List<Ghost>();
@@ -60,9 +65,15 @@ namespace PacmanIterationOne
 
         Stopwatch swMouthTime = new Stopwatch();
         Label lblScore = new Label();
+        bool threadRunning = true;
+        Label lblInterface;
+        Form Interface = new Form();
+        Queue<string> interfaceStrings;
 
         public Form1()
         {
+            interfaceStrings = new Queue<string>(intArrayOfStrLen);
+
             InitializeComponent();
             this.MaximizeBox = false;
 
@@ -84,10 +95,10 @@ namespace PacmanIterationOne
             rectPlayer = new Rectangle(intPlayerX, intPlayerY, intCellSize, intCellSize);
 
             //create the four ghosts
-            listGhosts.Add(new Ghost(400, 400, Color.Red, arrMaze, intCellSize));
-            listGhosts.Add(new Ghost(300, 300, Color.Pink, arrMaze, intCellSize));
-            listGhosts.Add(new Ghost(100, 100, Color.Cyan, arrMaze, intCellSize));
-            listGhosts.Add(new Ghost(200, 200, Color.Orange, arrMaze, intCellSize));
+            listGhosts.Add(new Ghost(intCellSize * 3, intCellSize, Color.Red, arrMaze, intCellSize, "Blinky", this, new Point(1, 1)));
+            listGhosts.Add(new Ghost(intCellSize, intCellSize * intMazeX - 2 * intCellSize, Color.Pink, arrMaze, intCellSize, "Pinky", this, new Point(1, 1)));
+            listGhosts.Add(new Ghost(intMazeY * intCellSize - 2 * intCellSize, intCellSize, Color.Cyan, arrMaze, intCellSize, "Inky", this, new Point(1, 1)));
+            listGhosts.Add(new Ghost(intMazeY * intCellSize - 2 * intCellSize, intMazeX * intCellSize - 2 * intCellSize, Color.Orange, arrMaze, intCellSize, "Clyde", this, new Point(1, 1)));
 
             //creating the label and setting attributes
             lblScore.Location = new Point(ClientSize.Width - lblScore.Width * 2, 0);
@@ -100,10 +111,44 @@ namespace PacmanIterationOne
             thrdGameLoop = new Thread(GameLoop);
             thrdGameLoop.Start();
 
+            thrdGarbageDispose = new Thread(DisposeGarbage);
+            thrdGarbageDispose.Start();
+
+            this.Location = new Point(Screen.FromControl(this).Bounds.Right - this.Width, 0);
+
+            Interface.Text = "Debug";
+            Interface.Size = new Size(400, this.Size.Height);
+            Interface.StartPosition = FormStartPosition.Manual;
+            Interface.BackColor = Color.Black;
+            Interface.ControlBox = false;
+            Interface.FormBorderStyle = FormBorderStyle.None;
+            Interface.Shown += (s, e) =>
+            {
+                Interface.Location = new Point(this.Left - Interface.Width, this.Top);
+
+            };
+            lblInterface = new Label();
+            lblInterface.Location = new Point(0, 0);
+            lblInterface.Size = new Size(Interface.ClientSize.Width, Interface.ClientSize.Height);
+            lblInterface.Font = new Font("Consolas", 10);
+            lblInterface.ForeColor = Color.Lime;
+            Interface.Controls.Add(lblInterface);
+
+            Interface.Show();
+            this.Move += (s, e) =>
+            {
+                Interface.Location = new Point(this.Left - Interface.Width, this.Top);
+            };
+
             this.DoubleBuffered = true;
         }
 
-        private void Form1_KeyDown(object sender, KeyEventArgs e)
+        private void CloseForm(object sender, FormClosingEventArgs e)
+        {
+            threadRunning = false;
+        }
+
+        private void KeyDownEvent(object sender, KeyEventArgs e)
         {
             switch (e.KeyCode)
             {
@@ -118,6 +163,19 @@ namespace PacmanIterationOne
                     dirNext = Direction.Left;
                     break;
                 case Keys.D:
+                    dirNext = Direction.Right;
+                    break;
+
+                case Keys.Up:
+                    dirNext = Direction.Up;
+                    break;
+                case Keys.Down:
+                    dirNext = Direction.Down;
+                    break;
+                case Keys.Left:
+                    dirNext = Direction.Left;
+                    break;
+                case Keys.Right:
                     dirNext = Direction.Right;
                     break;
             }
@@ -250,7 +308,7 @@ namespace PacmanIterationOne
                 for (int y = 0; y < intMazeY; y++)
                 {
                     if (arrMaze[x, y] == 0)
-                        arrMaze[x, y] = 2;                 
+                        arrMaze[x, y] = 2;
                 }
             }
         }
@@ -263,13 +321,15 @@ namespace PacmanIterationOne
             BoundaryReadd();
             PelletAdd();
             RandomBrushColours();
+            AddStringToQueue($"Maze Generated: {intMazeX} x {intMazeY} at {DateTime.Now.ToLongTimeString()}");
         }
 
         private void RandomBrushColours()
         {
-            R = rnd.Next(150, 220);
+            R = rnd.Next(50, 220);
             G = rnd.Next(50, 220);
             B = rnd.Next(50, 220);
+            AddStringToQueue($"Brush created with R {R} G {G} B {B} at {DateTime.Now.ToLongTimeString()}");
             brush = new SolidBrush(Color.FromArgb(200, R, G, B));
         }
 
@@ -285,23 +345,26 @@ namespace PacmanIterationOne
                 {
                     if (arrMaze[row, col] == 1)
                         g.FillRectangle(brush, col * intCellSize, row * intCellSize, intCellSize, intCellSize);
-
                     else if (arrMaze[row, col] == 0)
                         g.FillRectangle(Brushes.Black, col * intCellSize, row * intCellSize, intCellSize, intCellSize);
                     //draw pellets for every 2 in the array
+
                     else if (arrMaze[row, col] == 2)
                     {
                         //empty space is black rectangle
                         g.FillRectangle(Brushes.Black, col * intCellSize, row * intCellSize, intCellSize, intCellSize);
                         //pellet is a small yellow circle in the center of the cell
-                        g.FillEllipse(Brushes.Yellow, 
-                            col * intCellSize + (intCellSize / 5 * 2), row * intCellSize + (intCellSize / 5 * 2), 
+                        g.FillEllipse(Brushes.Yellow,
+                            col * intCellSize + (intCellSize / 5 * 2), row * intCellSize + (intCellSize / 5 * 2),
                             intCellSize / 5, intCellSize / 5);
+                    }
+                    else
+                    {
+                        g.FillRectangle(Brushes.Green, col * intCellSize, row * intCellSize, intCellSize, intCellSize);
                     }
                 }
             }
 
-            //paint player and ghosts afterwards in order to be on top of maze
             float MouthAngle = (MathF.Sin(fltMouthAngle * 3 + float.Pi / 6) + 0.9f) * 20;
             g.FillPie(Brushes.Yellow, rectPlayer, directionAngle[dirCurrent] + (MouthAngle), 360 - (2 * MouthAngle));
             foreach (Ghost ghost in listGhosts)
@@ -337,13 +400,13 @@ namespace PacmanIterationOne
 
             //checks if the new x or y is valid then sets
             //the players new coordinates and direction
-            if (IsValidMove(tryX, tryY))
+            if (IsValidMove(tryX, tryY, rectPlayer, true))
             {
                 intPlayerX = tryX;
                 intPlayerY = tryY;
                 dirCurrent = dirNext;
                 directionAngle[Direction.None] = directionAngle[dirCurrent];
-                if(!swMouthTime.IsRunning)
+                if (!swMouthTime.IsRunning)
                 {
                     swMouthTime.Start();
                 }
@@ -353,7 +416,7 @@ namespace PacmanIterationOne
                 //reset test variables if they were invalid
                 tryX = intPlayerX;
                 tryY = intPlayerY;
-                //continue going in the current direction 
+                //continue going in the current direction
                 switch (dirCurrent)
                 {
                     case Direction.Up:
@@ -370,7 +433,7 @@ namespace PacmanIterationOne
                         break;
                 }
                 //checking for collision on current direction
-                if (IsValidMove(tryX, tryY))
+                if (IsValidMove(tryX, tryY, rectPlayer, true))
                 {
                     intPlayerX = tryX;
                     intPlayerY = tryY;
@@ -378,6 +441,7 @@ namespace PacmanIterationOne
                 else
                 {
                     dirCurrent = Direction.None;
+                    AddStringToQueue($"Player collision in ({tryX / intCellSize}, {tryY / intCellSize}) at {DateTime.Now.ToLongTimeString()}");
                     swMouthTime.Reset();
                 }
             }
@@ -386,12 +450,12 @@ namespace PacmanIterationOne
             //force refresh
             Invalidate();
         }
-        
 
-        private bool IsValidMove(int newX, int newY)
+
+        public bool IsValidMove(int newX, int newY, Rectangle pEntity, bool consumePellets)
         {
             //test rectangle for collision
-            Rectangle rectNewPlayer = new Rectangle(newX, newY, rectPlayer.Width, rectPlayer.Height);
+            Rectangle rectNewEntity = new Rectangle(newX, newY, pEntity.Width, pEntity.Height);
 
             //goes through every cell wall and
             //creates a rectangle for every one
@@ -404,19 +468,19 @@ namespace PacmanIterationOne
                         Rectangle mazeWall = new Rectangle(col * intCellSize, row * intCellSize, intCellSize, intCellSize);
                         //using IntersectsWith method to check for collision
                         //returning IsValidMove as false if the intersect is true
-                        if (rectNewPlayer.IntersectsWith(mazeWall))
+                        if (rectNewEntity.IntersectsWith(mazeWall))
                         {
                             return false;
                         }
                     }
-                    else if (arrMaze[row, col] == 2)
+                    else if (arrMaze[row, col] == 2 && consumePellets)
                     {
                         Rectangle pellet = new Rectangle(col * intCellSize + (intCellSize / 5 * 2),
                             row * intCellSize + (intCellSize / 5 * 2),
                             intCellSize / 5, intCellSize / 5);
                         //using IntersectsWith method to check for collision
                         //returning IsValidMove as false if the intersect is true
-                        if (rectNewPlayer.IntersectsWith(pellet))
+                        if (rectNewEntity.IntersectsWith(pellet))
                         {
                             arrMaze[row, col] = 0;
                             intScore += 10;
@@ -426,76 +490,20 @@ namespace PacmanIterationOne
             }
             //checks for collision with newX and newY on each side
             //to make sure player can not go out of bounds at all
-            if (newX < 0 || newY < 0 || newX + rectPlayer.Width > ClientSize.Width || newY + rectPlayer.Height > ClientSize.Height)
+            if (newX < 0 || newY < 0 || newX + pEntity.Width > ClientSize.Width || newY + pEntity.Height > ClientSize.Height)
                 return false;
+
             //if none of the checks are activated
             //then it is returned as a valid move
             return true;
         }
-        //allows for an input of an entities current position
-        //and then destination, returning the point of the next tile.
-        private Point GetNextTileBFS(Point paraStart, Point paraEnd)
+
+        public bool GhostCanMoveTo(int newX, int newY, Rectangle rectGhost)
         {
-            //stores visited cells as booleans in a 2 dimensional array
-            //visited cells marked true
-            bool[,] arrVisitedCells = new bool[intMazeX, intMazeY];
-
-            //does the same but stores parent points
-            //helps reconstruct paths
-            Point[,] pntArrOrigin = new Point[intMazeX, intMazeY];
-
-            //the queue for the travel of the fastest path
-            Queue<Point> pntQueue = new Queue<Point>();
-
-
-            //queues the start point then marks it as visited
-            pntQueue.Enqueue(paraStart);
-            arrVisitedCells[paraStart.Y, paraStart.X] = true;
-
-            //defines the different directions using points, which
-            //i can then use to add to the current position to check
-            Point[] directions = { new Point(0, -1), new Point(0, 1), new Point(-1, 0), new Point(1, 0) };
-
-            //loops until all directions are explored
-            while (pntQueue.Count > 0)
-            {
-                //dequeue current point then check if the current point has reached the end
-                Point pntCurrent = pntQueue.Dequeue();
-
-                if (pntCurrent == paraEnd)
-                {
-                    //backtrack to find first step then
-                    //follows the origin chain using this
-                    Point pntStep = paraEnd;
-                    while (pntArrOrigin[pntStep.Y, pntStep.X] != paraStart)
-                    {
-                        pntStep = pntArrOrigin[pntStep.Y, pntStep.X];
-                    }
-                    //returns first move
-                    return pntStep;
-                }
-                //goes through each direction
-                foreach (Point p in directions)
-                {
-                    //create test values using each points X and Y value(0, 1, -1)
-                    int intStepX = pntCurrent.X + p.X;
-                    int intStepY = pntCurrent.Y + p.Y;
-
-                    //checks that the cell is not visited and is not a wall
-                    if (!arrVisitedCells[intStepY, intStepX] && arrMaze[intStepY, intStepX] == 0)
-                    {
-                        //marks cell as visited
-                        arrVisitedCells[intStepY, intStepX] = true;
-                        //store current point as origin
-                        pntArrOrigin[intStepY, intStepX] = pntCurrent;
-                        //creates new point for exploration
-                        pntQueue.Enqueue(new Point(intStepX, intStepY));
-                    }
-                }
-            }
-            //if path not found returns back to the start (no move)
-            return paraStart;
+            return IsValidMove(newX, newY, rectGhost, false);
         }
+
+
 
         private int BreadthDifference(int paraValueOne, int paraValueTwo)
         {
@@ -507,62 +515,187 @@ namespace PacmanIterationOne
 
         }
 
-        private int MoveTowards(int current, int target, int speed)
+        private void MoveGhosts()
         {
-            //checks if current is more left/above target
-            if (current < target)
+            Point playerTile = new Point(intPlayerX / intCellSize, intPlayerY / intCellSize);
+
+            foreach (Ghost ghost in listGhosts)
             {
-                int next = current + speed;
+                Point ghostTile = new Point(ghost.X / intCellSize, ghost.Y / intCellSize);
 
-                if (next > target) return target;
-                return next;
+                // Check if ghost is stuck (position didn't change)
+                bool stuck = (ghost.X == ghost.prevX && ghost.Y == ghost.prevY);
+
+                // Only pick a new tile if reached next tile or stuck
+                if (stuck)
+                {
+                    ghost.nextTile = BFS.GetNextTileBFS(arrMaze, ghostTile, ghost.chasePoint);
+                }
+
+                int targetX = ghost.nextTile.X * intCellSize;
+                int targetY = ghost.nextTile.Y * intCellSize;
+
+                // Save previous position
+                ghost.prevX = ghost.X;
+                ghost.prevY = ghost.Y;
+
+                // Move toward target tile
+                if (Math.Abs(targetX - ghost.X) > Math.Abs(targetY - ghost.Y))
+                {
+                    ghost.X += (int)(Math.Sign(targetX - ghost.X) * ghost.ghostSpeed);
+                    if (!GhostCanMoveTo(ghost.X, ghost.Y, ghost.rectGhost))
+                        ghost.X = ghost.prevX;
+                }
+                else
+                {
+                    ghost.Y += (int)(Math.Sign(targetY - ghost.Y) * ghost.ghostSpeed);
+                    if (!GhostCanMoveTo(ghost.X, ghost.Y, ghost.rectGhost))
+                        ghost.Y = ghost.prevY;
+                }
+
+                // Update direction
+                if (ghost.X < targetX) ghost.dirCurrent = Direction.Right;
+                else if (ghost.X > targetX) ghost.dirCurrent = Direction.Left;
+                else if (ghost.Y < targetY) ghost.dirCurrent = Direction.Down;
+                else if (ghost.Y > targetY) ghost.dirCurrent = Direction.Up;
+                else ghost.dirCurrent = Direction.None;
+
+                ghost.UpdateRectangle();
             }
-
-            //checks if current is more right/below target
-            else if (current > target)
-            {
-                int next = current - speed;
-
-                if (next < target) return target;
-                return next;
-            }
-            //otherwise the current position = target thus will remain
-            return current;
         }
-        private void MoveObjToTarget(Rectangle paraObject, Rectangle paraTarget, int paraPursuerSpeed, Point paraTargetPosition)
+
+
+
+
+
+        private void UpdateGhostChasePoints()
         {
-            
-            //calculate how far away enemy is in both X and Y coordinates
-            if (BreadthDifference(paraObject.X, paraTargetPosition.X) < paraPursuerSpeed &&
-                BreadthDifference(paraObject.Y, paraTargetPosition.Y) < paraPursuerSpeed)
+            // Player's tile
+            Point playerTile = new Point(intPlayerX / intCellSize, intPlayerY / intCellSize);
+
+            foreach (Ghost ghost in listGhosts)
             {
-                //creates points for both enemy and player
-                Point enemyCell = new Point(paraObject.X / intCellSize, paraObject.Y / intCellSize);
-                Point playerCell = new Point(paraTarget.X / intCellSize, paraTarget.Y / intCellSize);
+                switch (ghost.name)
+                {
+                    case "Blinky":
+                        // Direct chase
+                        ghost.chasePoint = playerTile;
+                        break;
 
-                //creates point for enemy to move to using current fastest path
-                Point nextCell = GetNextTileBFS(enemyCell, playerCell);
+                    case "Pinky":
+                        Point pinkyTarget = playerTile;
+                        switch (dirCurrent)
+                        {
+                            case Direction.Up: pinkyTarget.Y -= 4; break;
+                            case Direction.Down: pinkyTarget.Y += 4; break;
+                            case Direction.Left: pinkyTarget.X -= 4; break;
+                            case Direction.Right: pinkyTarget.X += 4; break;
+                        }
+                        // Clamp to maze bounds
+                        pinkyTarget.X = Math.Clamp(pinkyTarget.X, 0, intMazeY - 1);
+                        pinkyTarget.Y = Math.Clamp(pinkyTarget.Y, 0, intMazeX - 1);
+                        ghost.chasePoint = pinkyTarget;
+                        break;
 
-                //sets target as the new cell, makes sure they can only move on snaps
-                paraTargetPosition = new Point(nextCell.X * intCellSize, nextCell.Y * intCellSize);
+                    case "Inky":
+                        Point vectorTarget = playerTile;
+                        switch (dirCurrent)
+                        {
+                            case Direction.Up: vectorTarget.Y -= 2; break;
+                            case Direction.Down: vectorTarget.Y += 2; break;
+                            case Direction.Left: vectorTarget.X -= 2; break;
+                            case Direction.Right: vectorTarget.X += 2; break;
+                        }
+
+                        // Find Blinky
+                        Ghost blinky = listGhosts.Find(g => g.name == "Blinky");
+                        if (blinky != null)
+                        {
+                            int targetX = vectorTarget.X + (vectorTarget.X - (blinky.X / intCellSize));
+                            int targetY = vectorTarget.Y + (vectorTarget.Y - (blinky.Y / intCellSize));
+
+                            // Clamp to maze bounds
+                            targetX = Math.Clamp(targetX, 0, intMazeY - 1);
+                            targetY = Math.Clamp(targetY, 0, intMazeX - 1);
+
+                            ghost.chasePoint = new Point(targetX, targetY);
+                        }
+                        else
+                        {
+                            ghost.chasePoint = vectorTarget;
+                        }
+                        break;
+
+                    case "Clyde":
+                        int distX = Math.Abs(ghost.X / intCellSize - playerTile.X);
+                        int distY = Math.Abs(ghost.Y / intCellSize - playerTile.Y);
+                        if (distX + distY > 8)
+                        {
+                            ghost.chasePoint = playerTile;
+                        }
+                        else
+                        {
+                            ghost.chasePoint = new Point(1, intMazeX - 2);
+                        }
+                        break;
+                }
             }
+        }
 
-            //if nothings changes enemy continues moving towards player
-            paraObject.X = MoveTowards(paraObject.X, paraTargetPosition.X, paraPursuerSpeed);
-            paraObject.Y = MoveTowards(paraObject.Y, paraTargetPosition.Y, paraPursuerSpeed);
-            
+
+
+
+
+
+        public void AddStringToQueue(string pStr)
+        {
+            if (interfaceStrings.Count >= intArrayOfStrLen)
+                interfaceStrings.Dequeue();
+            interfaceStrings.Enqueue(pStr);
+        }
+
+        public void UpdateTerminal()
+        {
+            string combined = string.Join("\n", interfaceStrings.ToArray());
+
+            try
+            { Interface.Invoke(() => { lblInterface.Text = combined; }); }
+
+            catch
+            { return; }
+
+
+        }
+
+        public void DisposeGarbage()
+        {
+            while (threadRunning)
+            {
+                Thread.Sleep(100);
+                if (++intDisposeCount >= 50)
+                {
+                    GC.Collect();
+                    intDisposeCount = 0;
+                    AddStringToQueue($"Garbage Collected at {DateTime.Now.ToLongTimeString()}");
+                }
+            }
         }
 
         private void GameLoop()
         {
             MazeCreate();
             swMouthTime.Start();
-            while (true)
+            while (threadRunning)
             {
                 MovePlayer();
+                MoveGhosts();
+                UpdateGhostChasePoints();
+                UpdateTerminal();
                 fltMouthAngle = (float)swMouthTime.Elapsed.TotalSeconds * 7;
                 Thread.Sleep(20);
+                Invalidate();
             }
+            return;
         }
     }
 }
