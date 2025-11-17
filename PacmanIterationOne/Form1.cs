@@ -73,6 +73,8 @@ namespace pIterationOne
         Label lblInterface;
         Form Interface = new Form();
         Queue<string> interfaceStrings;
+        Thread mainThread;
+
 
         public Form1()
         {
@@ -85,7 +87,7 @@ namespace pIterationOne
             interfaceStrings = new Queue<string>(intArrayOfStrLen);
 
             InitializeComponent();
-            ResetGame();
+            //ResetGame();
             this.MaximizeBox = false;
 
             //choose random numbers for maze size
@@ -121,7 +123,7 @@ namespace pIterationOne
             this.Controls.Add(lblScore);
 
             //create and start game loop thread
-            /*
+            
             thrdGameLoop = new Thread(GameLoop);
             thrdGameLoop.Start();
 
@@ -129,8 +131,7 @@ namespace pIterationOne
             thrdGarbageDispose.Start();
 
             thrdGhostPhases = new Thread(PhaseSwitch);
-            thrdGhostPhases.Start();
-            */
+            thrdGhostPhases.Start();        
 
             this.Location = new Point(Screen.FromControl(this).Bounds.Right - this.Width, 0);
 
@@ -816,12 +817,16 @@ namespace pIterationOne
 
         private void ResetGame()
         {
+            
             Thread thrdGameLoop = new Thread(GameLoop);
             thrdGameLoop.Start();
+            mainThread.Suspend();
+            /*
             Thread thrdGarbageDispose = new Thread(DisposeGarbage);
             thrdGarbageDispose.Start();
             Thread thrdGhostPhases = new Thread(PhaseSwitch);
             thrdGhostPhases.Start();
+            */
         }
 
 
