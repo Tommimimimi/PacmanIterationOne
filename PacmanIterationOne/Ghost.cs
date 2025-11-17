@@ -22,7 +22,8 @@ public class Ghost
     }
     public Phases currPhase;
 
-    public Ghost(int startX, int startY, Color c, int[,] mazeArr, int cellSize, string name, Form1 f, Point initialChase, Phases pCurrPhase)
+    public Ghost(int startX, int startY, Color c, int[,] mazeArr, int cellSize,
+        string name, Form1 f, Point initialChase, Phases pCurrPhase)
     {
         this.X = startX;
         this.Y = startY;
@@ -52,7 +53,5 @@ public class Ghost
     public void Draw(Graphics g)
     {
         g.FillEllipse(new SolidBrush(color), rectGhost);
-    }
-
-    
+    }   
 }

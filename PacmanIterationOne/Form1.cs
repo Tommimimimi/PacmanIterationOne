@@ -131,7 +131,7 @@ namespace pIterationOne
 
             this.Location = new Point(Screen.FromControl(this).Bounds.Right - this.Width, 0);
 
-            Interface.Text = "Debug";
+            Interface.Text = "Interface";
             Interface.Size = new Size(400, this.Size.Height);
             Interface.StartPosition = FormStartPosition.Manual;
             Interface.BackColor = Color.Black;
@@ -530,6 +530,7 @@ namespace pIterationOne
 
         }
 
+
         private void MoveGhosts()
         {
             Point playerTile = new Point(intPlayerX / intCellSize, intPlayerY / intCellSize);
@@ -682,9 +683,10 @@ namespace pIterationOne
                         break;
 
                 }
-                if (ghost.X == ghost.nextTile.X * intCellSize && ghost.Y == ghost.nextTile.Y * intCellSize && ghost.currPhase == Ghost.Phases.Scatter)
+                if (ghost.X == ghost.chasePoint.X && ghost.Y == ghost.chasePoint.Y && ghost.currPhase == Ghost.Phases.Scatter)
                 {
                     ghost.currPhase = Ghost.Phases.Chase;
+                    AddStringToQueue($"{ghost.name} reached their scatter corner, phase is now {ghost.currPhase} at {DateTime.Now.ToLongTimeString()}");
                 }
             }
         }
@@ -716,11 +718,7 @@ namespace pIterationOne
                 Thread.Sleep(100);
                 if (++intDisposeCount >= 50)
                 {
-                    GC.Collect();
-                    listGhosts.Add(new Ghost(intCellSize * 3, intCellSize, Color.Red, arrMaze, intCellSize, "Blinky", this, new Point(1, 1), Ghost.Phases.Chase));
-                    listGhosts.Add(new Ghost(intCellSize, intCellSize * intMazeX - 2 * intCellSize, Color.Pink, arrMaze, intCellSize, "Pinky", this, new Point(1, 1), Ghost.Phases.Chase));
-                    listGhosts.Add(new Ghost(intMazeY * intCellSize - 2 * intCellSize, intCellSize, Color.Cyan, arrMaze, intCellSize, "Inky", this, new Point(1, 1), Ghost.Phases.Chase));
-                    listGhosts.Add(new Ghost(intMazeY * intCellSize - 2 * intCellSize, intMazeX * intCellSize - 2 * intCellSize, Color.Orange, arrMaze, intCellSize, "Clyde", this, new Point(1, 1), Ghost.Phases.Chase));
+                    GC.Collect();               
                     intDisposeCount = 0;
                     AddStringToQueue($"Garbage Collected at {DateTime.Now.ToLongTimeString()}");
                 }
@@ -762,9 +760,8 @@ namespace pIterationOne
 
         private void PlayerDeath()
         {
-            if(--intPlayerLives == 5)
+            if(--intPlayerLives < 0)
             {
-                threadRunning = false;
                 ResetGame();
             }
             else
@@ -788,7 +785,7 @@ namespace pIterationOne
             {
                 MovePlayer();
                 MoveGhosts();
-                GhostCollisionCheck();
+                //GhostCollisionCheck();
                 UpdateGhostChasePoints();
                 UpdateTerminal();
                 fltMouthAngle = (float)swMouthTime.Elapsed.TotalSeconds * 7;
