@@ -79,8 +79,7 @@ namespace pIterationOne
         {
             InitializeComponent();
             StartGame();
-            this.BringToFront();
-            this.Focus();
+
         }
 
         private void StartGame()
@@ -162,9 +161,6 @@ namespace pIterationOne
 
             thrdGhostPhases = new Thread(PhaseSwitch);
             thrdGhostPhases.Start();
-
-            this.BringToFront();
-            this.Focus();
         }
 
         private void CloseForm(object sender, FormClosingEventArgs e)
@@ -830,11 +826,10 @@ namespace pIterationOne
             {
                 restarted = true;
                 Application.Restart();
-                this.BringToFront();
-                this.Focus();
+                this.Invoke(this.BringToFront);
+                this.Invoke(this.Focus);
             }
-            this.BringToFront();
-            this.Focus();
+
         }
 
 
