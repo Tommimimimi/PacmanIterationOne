@@ -61,6 +61,7 @@ namespace pIterationOne
         Thread thrdGarbageDispose;
         Thread thrdGhostPhases;
         Rectangle rectPlayer;
+        Rectangle rectSpawnPoint;
 
         List<Ghost> listGhosts = new List<Ghost>();
         Brush brush = new SolidBrush(Color.FromArgb(200, 20, 20, 20));
@@ -367,6 +368,7 @@ namespace pIterationOne
                 if (arrMaze[spawnX, spawnY] == 0)
                 {
                     arrMaze[spawnX, spawnY] = -1;
+                    rectSpawnPoint = new Rectangle(spawnY * intCellSize, spawnX * intCellSize, intCellSize, intCellSize);
                     suitableSpawn = true;
                 }
                 else
@@ -423,19 +425,16 @@ namespace pIterationOne
                             col * intCellSize + (intCellSize / 5 * 2), row * intCellSize + (intCellSize / 5 * 2),
                             intCellSize / 5, intCellSize / 5);
                     }
-                    else
-                    {
-                        g.FillRectangle(Brushes.Green, col * intCellSize, row * intCellSize, intCellSize, intCellSize);
-                    }
                 }
             }
-
             float MouthAngle = (MathF.Sin(fltMouthAngle * 3 + float.Pi / 6) + 0.9f) * 20;
             g.FillPie(Brushes.Yellow, rectPlayer, directionAngle[dirCurrent] + (MouthAngle), 360 - (2 * MouthAngle));
             foreach (Ghost ghost in listGhosts)
             {
                 ghost.Draw(g);
             }
+            g.FillRectangle(Brushes.Black, rectSpawnPoint);
+            g.FillEllipse(Brushes.FloralWhite, rectSpawnPoint);
             lblScore.Text = "Score: " + Convert.ToString(intScore);
         }
         private void MovePlayer()
@@ -883,7 +882,7 @@ namespace pIterationOne
             {
                 MovePlayer();
                 MoveGhosts();
-                GhostCollisionCheck();
+                //GhostCollisionCheck();
                 UpdateGhostChasePoints();
                 foreach (Ghost ghost in listGhosts)
                 {
