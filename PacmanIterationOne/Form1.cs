@@ -17,6 +17,7 @@ namespace pIterationOne
         None
     }
 
+
     public partial class Form1 : Form
     {
         public Dictionary<Direction, float> directionAngle = new()
@@ -356,21 +357,33 @@ namespace pIterationOne
             }
         }
 
-        private void ReserveGhostHouseArea(int cx, int cy)
+        private void FindSuitableGhostSpawn()
         {
-            for (int y = cy - 1; y <= cy + 1; y++)
-                for (int x = cx - 2; x <= cx + 2; x++)
-                    arrMaze[y, x] = -1;
+            int spawnX = intMazeX / 2 - 1;
+            int spawnY = intMazeY / 2 + 1;
+            bool suitableSpawn = false;
+            while (!suitableSpawn)
+            {
+                if (arrMaze[spawnX, spawnY] == 0)
+                {
+                    arrMaze[spawnX, spawnY] = -1;
+                    suitableSpawn = true;
+                }
+                else
+                {
+                    spawnX += 1;
+                }
+            }
+            
         }
-
 
         private void MazeCreate()
         {
             SetMazeValue();
-            ReserveGhostHouseArea(intMazeY / 2, intMazeX / 2);
             MazePathing(1, 1);
             DeadEndRemove();
             BoundaryReadd();
+            FindSuitableGhostSpawn();
             PelletAdd();
             RandomBrushColours();
             AddStringToQueue($"Maze Generated: {intMazeX} x {intMazeY} at {DateTime.Now.ToLongTimeString()}");
