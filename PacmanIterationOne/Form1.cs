@@ -108,14 +108,8 @@ namespace pIterationOne
             intPlayerY = intCellSize;
             intPlayerSpeed = intCellSize / 8;
             rectPlayer = new Rectangle(intPlayerX, intPlayerY, intCellSize, intCellSize);
-
             intPlayerLives = 3;
-
-            //create the four ghosts
-            listGhosts.Add(new Ghost(intCellSize * 3, intCellSize, Color.Red, arrMaze, intCellSize, "Blinky", this, new Point(1, 1), Ghost.Phases.Chase));
-            listGhosts.Add(new Ghost(intCellSize, intCellSize * intMazeX - 2 * intCellSize, Color.Pink, arrMaze, intCellSize, "Pinky", this, new Point(1, 1), Ghost.Phases.Chase));
-            listGhosts.Add(new Ghost(intMazeY * intCellSize - 2 * intCellSize, intCellSize, Color.Cyan, arrMaze, intCellSize, "Inky", this, new Point(1, 1), Ghost.Phases.Chase));
-            listGhosts.Add(new Ghost(intMazeY * intCellSize - 2 * intCellSize, intMazeX * intCellSize - 2 * intCellSize, Color.Orange, arrMaze, intCellSize, "Clyde", this, new Point(1, 1), Ghost.Phases.Chase));
+            
 
             //creating the label and setting attributes
             lblScore.Location = new Point(ClientSize.Width - lblScore.Width * 2, 0);
@@ -427,13 +421,13 @@ namespace pIterationOne
                     }
                 }
             }
+            g.FillRectangle(Brushes.Black, rectSpawnPoint);
             float MouthAngle = (MathF.Sin(fltMouthAngle * 3 + float.Pi / 6) + 0.9f) * 20;
             g.FillPie(Brushes.Yellow, rectPlayer, directionAngle[dirCurrent] + (MouthAngle), 360 - (2 * MouthAngle));
             foreach (Ghost ghost in listGhosts)
             {
                 ghost.Draw(g);
             }
-            g.FillRectangle(Brushes.Black, rectSpawnPoint);
             g.FillEllipse(Brushes.FloralWhite, rectSpawnPoint);
             lblScore.Text = "Score: " + Convert.ToString(intScore);
         }
@@ -582,8 +576,6 @@ namespace pIterationOne
 
         private void MoveGhosts()
         {
-
-
             Point playerTile = new Point(intPlayerX / intCellSize, intPlayerY / intCellSize);
 
             foreach (Ghost ghost in listGhosts)
@@ -803,6 +795,26 @@ namespace pIterationOne
             }
         }
 
+        private async void ReleaseGhosts()
+        {
+            await Task.Delay(2000); //blinky leaves
+            if (listGhosts.Count < 1)
+            { listGhosts.Add(new Ghost(rectSpawnPoint.X, rectSpawnPoint.Y, Color.Red, arrMaze, intCellSize, "Blinky", this, new Point(1, 1), Ghost.Phases.Chase)); }
+
+            
+            await Task.Delay(3000); //pinky leaves
+            if (listGhosts.Count < 2)
+            { listGhosts.Add(new Ghost(rectSpawnPoint.X, rectSpawnPoint.Y, Color.Pink, arrMaze, intCellSize, "Pinky", this, new Point(1, 1), Ghost.Phases.Chase)); }
+            
+            await Task.Delay(5000); //inky leaves
+            if (listGhosts.Count < 3)
+            { listGhosts.Add(new Ghost(rectSpawnPoint.X, rectSpawnPoint.Y, Color.Cyan, arrMaze, intCellSize, "Inky", this, new Point(1, 1), Ghost.Phases.Chase)); }
+            
+            await Task.Delay(7000); //clyde leaves
+            if (listGhosts.Count < 4)
+                { listGhosts.Add(new Ghost(rectSpawnPoint.X, rectSpawnPoint.Y, Color.Orange, arrMaze, intCellSize, "Clyde", this, new Point(1, 1), Ghost.Phases.Chase)); }
+        }
+
         private void OriginalPos()
         {
             foreach (Ghost ghost in listGhosts)
@@ -880,6 +892,7 @@ namespace pIterationOne
             swMouthTime.Start();
             while (threadRunning)
             {
+                ReleaseGhosts();
                 MovePlayer();
                 MoveGhosts();
                 //GhostCollisionCheck();
