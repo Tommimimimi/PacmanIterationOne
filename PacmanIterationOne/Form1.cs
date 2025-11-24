@@ -270,6 +270,7 @@ namespace pIterationOne
                         testCol = paraCol + 2;
                         break;
                 }
+                
                 if (testRow > 0 && testRow < intMazeX && testCol > 0 && testCol < intMazeY
                     && arrMaze[testRow, testCol] == 1)
                 {
@@ -284,6 +285,8 @@ namespace pIterationOne
             {
                 for (int col = 1; col < intMazeY - 1; col++)
                 {
+                    if (arrMaze[row, col] == -1)
+                        return;
                     int walls = 0;
                     //stores the cell opposite the single open cell within a deadend
                     Direction? dirOpenCell = null;
@@ -353,9 +356,18 @@ namespace pIterationOne
             }
         }
 
+        private void ReserveGhostHouseArea(int cx, int cy)
+        {
+            for (int y = cy - 1; y <= cy + 1; y++)
+                for (int x = cx - 2; x <= cx + 2; x++)
+                    arrMaze[y, x] = -1;
+        }
+
+
         private void MazeCreate()
         {
             SetMazeValue();
+            ReserveGhostHouseArea(intMazeY / 2, intMazeX / 2);
             MazePathing(1, 1);
             DeadEndRemove();
             BoundaryReadd();
@@ -806,8 +818,10 @@ namespace pIterationOne
                         break;
                 }
             }
-            rectPlayer.X = intCellSize * 2;
-            rectPlayer.Y = intCellSize * 2;
+            intPlayerX = intCellSize;
+            intPlayerY = intCellSize;
+            intPlayerSpeed = intCellSize / 8;
+            rectPlayer = new Rectangle(intPlayerX, intPlayerY, intCellSize, intCellSize);
         }
 
         private void GhostCollisionCheck()
@@ -818,8 +832,8 @@ namespace pIterationOne
                 if (rectPlayer.IntersectsWith(rectGhost))
                 {
                     PlayerDeath();
-                    //AddStringToQueue($"Collision with {ghost.name} at {DateTime.Now.ToLongTimeString()}");
-                    //AddStringToQueue($"Lives are now {intPlayerLives}");
+                    AddStringToQueue($"Collision with {ghost.name} at {DateTime.Now.ToLongTimeString()}");
+                    AddStringToQueue($"Lives are now {intPlayerLives}");
                 }
             }
         }
@@ -828,7 +842,7 @@ namespace pIterationOne
         {
             if (--intPlayerLives <= 0)
             {
-                //ResetGame();
+                ResetGame();
             }
             else
             {
@@ -842,9 +856,9 @@ namespace pIterationOne
             {
                 restarted = true;
                 Application.Restart();
+                this.BringToFront();
+                this.Focus();
             }
-            this.Invoke(this.BringToFront);
-            this.Invoke(this.Focus);
         }
 
 
