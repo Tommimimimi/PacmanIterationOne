@@ -156,6 +156,9 @@ namespace pIterationOne
 
             thrdGhostPhases = new Thread(PhaseSwitch);
             thrdGhostPhases.Start();
+
+            this.BringToFront();
+            this.Focus();
         }
 
         private void CloseForm(object sender, FormClosingEventArgs e)
@@ -754,7 +757,7 @@ namespace pIterationOne
         {
             while (threadRunning)
             {
-                Thread.Sleep(100);
+                Thread.Sleep(1000);
                 if (++intDisposeCount >= 50)
                 {
                     GC.Collect();
@@ -797,56 +800,73 @@ namespace pIterationOne
 
         private async void ReleaseGhosts()
         {
-            await Task.Delay(2000); //blinky leaves
-            if (listGhosts.Count < 1)
-            { listGhosts.Add(new Ghost(rectSpawnPoint.X, rectSpawnPoint.Y, Color.Red, arrMaze, intCellSize, "Blinky", this, new Point(1, 1), Ghost.Phases.Chase)); }
+            bool boolBlinky = false;
+            bool boolPinky = false;
+            bool boolInky = false;
+            bool boolClyde = false;
+            foreach (Ghost ghost in listGhosts)
+            {
+                if (ghost.name == "Blinky")
+                {
+                    boolBlinky = true;
+                }
+                if (ghost.name == "Pinky")
+                {
+                    boolPinky = true;
+                }
+                if (ghost.name == "Inky")
+                {
+                    boolInky = true;
+                }
+                if (ghost.name == "Clyde")
+                {
+                    boolClyde = true;
+                }
+            }
+            
+            if (!boolBlinky)
+            {
+                await Task.Delay(2000); //blinky leaves
+                listGhosts.Add(new Ghost(rectSpawnPoint.X, rectSpawnPoint.Y, Color.Red, arrMaze, intCellSize, "Blinky", this, new Point(1, 1), Ghost.Phases.Chase));
+                boolBlinky = true;
+            }
 
             
-            await Task.Delay(3000); //pinky leaves
-            if (listGhosts.Count < 2)
-            { listGhosts.Add(new Ghost(rectSpawnPoint.X, rectSpawnPoint.Y, Color.DeepPink, arrMaze, intCellSize, "Pinky", this, new Point(1, 1), Ghost.Phases.Chase)); }
             
-            await Task.Delay(5000); //inky leaves
-            if (listGhosts.Count < 3)
-            { listGhosts.Add(new Ghost(rectSpawnPoint.X, rectSpawnPoint.Y, Color.Cyan, arrMaze, intCellSize, "Inky", this, new Point(1, 1), Ghost.Phases.Chase)); }
+            if (!boolPinky)
+            {
+                await Task.Delay(3000); //pinky leaves
+                listGhosts.Add(new Ghost(rectSpawnPoint.X, rectSpawnPoint.Y, Color.Pink, arrMaze, intCellSize, "Pinky", this, new Point(1, 1), Ghost.Phases.Chase));
+                boolPinky = true;      
+            }
             
-            await Task.Delay(7000); //clyde leaves
-            if (listGhosts.Count < 4)
-                { listGhosts.Add(new Ghost(rectSpawnPoint.X, rectSpawnPoint.Y, Color.Orange, arrMaze, intCellSize, "Clyde", this, new Point(1, 1), Ghost.Phases.Chase)); }
+            
+            if (!boolInky)
+            {
+                await Task.Delay(5000); //inky leaves
+                listGhosts.Add(new Ghost(rectSpawnPoint.X, rectSpawnPoint.Y, Color.Cyan, arrMaze, intCellSize, "Inky", this, new Point(1, 1), Ghost.Phases.Chase));
+                boolInky = true;
+            }
+            
+            
+            if (!boolClyde)
+            {
+                await Task.Delay(7000); //clyde leaves
+                listGhosts.Add(new Ghost(rectSpawnPoint.X, rectSpawnPoint.Y, Color.Orange, arrMaze, intCellSize, "Clyde", this, new Point(1, 1), Ghost.Phases.Chase));
+                boolClyde = true;
+            }
         }
 
         private void OriginalPos()
         {
-            foreach (Ghost ghost in listGhosts)
-            {
-                switch (ghost.name)
-                {
-                    case "Blinky":
-                        ghost.X = intCellSize * 3;
-                        ghost.Y = intCellSize;
-                        break;
-
-                    case "Pinky":
-                        ghost.X = intCellSize;
-                        ghost.Y = intCellSize * intMazeX - 2 * intCellSize;
-                        break;
-
-                    case "Inky":
-                        ghost.X = intMazeY * intCellSize - 2 * intCellSize;
-                        ghost.Y = intCellSize;
-                        break;
-
-                    case "Clyde":
-                        ghost.X = intMazeY * intCellSize - 2 * intCellSize;
-                        ghost.Y = intMazeX * intCellSize - 2 * intCellSize;
-                        break;
-                }
-            }
+            listGhosts.Clear();
+            ReleaseGhosts();
             intPlayerX = intCellSize;
             intPlayerY = intCellSize;
             intPlayerSpeed = intCellSize / 8;
             rectPlayer = new Rectangle(intPlayerX, intPlayerY, intCellSize, intCellSize);
         }
+        bool boolDeath = false;
 
         private void GhostCollisionCheck()
         {
@@ -855,11 +875,14 @@ namespace pIterationOne
                 Rectangle rectGhost = new Rectangle(ghost.X, ghost.Y, intCellSize, intCellSize);
                 if (rectPlayer.IntersectsWith(rectGhost))
                 {
-                    PlayerDeath();
                     AddStringToQueue($"Collision with {ghost.name} at {DateTime.Now.ToLongTimeString()}");
                     AddStringToQueue($"Lives are now {intPlayerLives}");
+                    boolDeath = true;
+                    break;
                 }
             }
+            if (boolDeath)
+                PlayerDeath();
         }
 
         private void PlayerDeath()
@@ -871,6 +894,7 @@ namespace pIterationOne
             else
             {
                 OriginalPos();
+                boolDeath = false;
             }
         }
         private bool restarted = false;
@@ -892,10 +916,10 @@ namespace pIterationOne
             swMouthTime.Start();
             while (threadRunning)
             {
-                ReleaseGhosts();
                 MovePlayer();
+                ReleaseGhosts();
                 MoveGhosts();
-                //GhostCollisionCheck();
+                GhostCollisionCheck();
                 UpdateGhostChasePoints();
                 foreach (Ghost ghost in listGhosts)
                 {
