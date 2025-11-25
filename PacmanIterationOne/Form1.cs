@@ -427,7 +427,9 @@ namespace pIterationOne
             g.FillRectangle(Brushes.Black, rectSpawnPoint);
             float MouthAngle = (MathF.Sin(fltMouthAngle * 3 + float.Pi / 6) + 0.9f) * 20;
             g.FillPie(Brushes.Yellow, rectPlayer, directionAngle[dirCurrent] + (MouthAngle), 360 - (2 * MouthAngle));
-            foreach (Ghost ghost in listGhosts)
+
+            Ghost[] ghosts = [.. listGhosts];
+            foreach (Ghost ghost in ghosts)
             {
                 ghost.Draw(g);
             }
@@ -581,7 +583,8 @@ namespace pIterationOne
         {
             Point playerTile = new Point(intPlayerX / intCellSize, intPlayerY / intCellSize);
 
-            foreach (Ghost ghost in listGhosts)
+            Ghost[] ghosts = [.. listGhosts];
+            foreach (Ghost ghost in ghosts)
             {
                 Point ghostTile = new Point(ghost.X / intCellSize, ghost.Y / intCellSize);
 
@@ -798,63 +801,34 @@ namespace pIterationOne
             }
         }
 
+        Dictionary<string, Color> GhostColors = new Dictionary<string, Color>
+        {
+            { "Blinky", Color.Red },
+            { "Pinky", Color.Pink },
+            { "Inky", Color.Cyan },
+            { "Clyde", Color.Orange }
+        };
+        private void TryRelease(string name)
+        {
+            foreach (Ghost g in listGhosts)
+                if (g.name == name) return;
+
+            listGhosts.Add(new Ghost(rectSpawnPoint.X, rectSpawnPoint.Y, GhostColors[name], arrMaze, intCellSize, name, this, new Point(1, 1), Ghost.Phases.Chase));
+        }
+
         private async void ReleaseGhosts()
         {
-            bool boolBlinky = false;
-            bool boolPinky = false;
-            bool boolInky = false;
-            bool boolClyde = false;
-            foreach (Ghost ghost in listGhosts)
-            {
-                if (ghost.name == "Blinky")
-                {
-                    boolBlinky = true;
-                }
-                if (ghost.name == "Pinky")
-                {
-                    boolPinky = true;
-                }
-                if (ghost.name == "Inky")
-                {
-                    boolInky = true;
-                }
-                if (ghost.name == "Clyde")
-                {
-                    boolClyde = true;
-                }
-            }
+            await Task.Delay(2000); //blinky leaves
+            TryRelease(GhostColors.Keys.ToArray()[0]);
             
-            if (!boolBlinky)
-            {
-                await Task.Delay(2000); //blinky leaves
-                listGhosts.Add(new Ghost(rectSpawnPoint.X, rectSpawnPoint.Y, Color.Red, arrMaze, intCellSize, "Blinky", this, new Point(1, 1), Ghost.Phases.Chase));
-                boolBlinky = true;
-            }
+            await Task.Delay(3000); //pinky leaves
+            TryRelease(GhostColors.Keys.ToArray()[1]);
 
-            
-            
-            if (!boolPinky)
-            {
-                await Task.Delay(3000); //pinky leaves
-                listGhosts.Add(new Ghost(rectSpawnPoint.X, rectSpawnPoint.Y, Color.Pink, arrMaze, intCellSize, "Pinky", this, new Point(1, 1), Ghost.Phases.Chase));
-                boolPinky = true;      
-            }
-            
-            
-            if (!boolInky)
-            {
-                await Task.Delay(5000); //inky leaves
-                listGhosts.Add(new Ghost(rectSpawnPoint.X, rectSpawnPoint.Y, Color.Cyan, arrMaze, intCellSize, "Inky", this, new Point(1, 1), Ghost.Phases.Chase));
-                boolInky = true;
-            }
-            
-            
-            if (!boolClyde)
-            {
-                await Task.Delay(7000); //clyde leaves
-                listGhosts.Add(new Ghost(rectSpawnPoint.X, rectSpawnPoint.Y, Color.Orange, arrMaze, intCellSize, "Clyde", this, new Point(1, 1), Ghost.Phases.Chase));
-                boolClyde = true;
-            }
+            await Task.Delay(5000); //inky leaves
+            TryRelease(GhostColors.Keys.ToArray()[2]);
+
+            await Task.Delay(7000); //clyde leaves
+            TryRelease(GhostColors.Keys.ToArray()[3]);
         }
 
         private void OriginalPos()
