@@ -803,6 +803,59 @@ namespace pIterationOne
 
         Dictionary<string, Color> GhostColors = new Dictionary<string, Color>
         {
+            bool boolBlinky = false;
+            bool boolPinky = false;
+            bool boolInky = false;
+            bool boolClyde = false;
+            foreach (Ghost ghost in listGhosts)
+            {
+                if (ghost.name == "Blinky")
+                {
+                    boolBlinky = true;
+                }
+                if (ghost.name == "Pinky")
+                {
+                    boolPinky = true;
+                }
+                if (ghost.name == "Inky")
+                {
+                    boolInky = true;
+                }
+                if (ghost.name == "Clyde")
+                {
+                    boolClyde = true;
+                }
+            }
+
+            await Task.Delay(2000); //blinky leaves
+            if (!boolBlinky)
+            {
+                listGhosts.Add(new Ghost(rectSpawnPoint.X, rectSpawnPoint.Y, Color.Red, arrMaze, intCellSize, "Blinky", this, new Point(1, 1), Ghost.Phases.Chase));
+                boolBlinky = false;
+            }
+
+            
+            await Task.Delay(3000); //pinky leaves
+            if (!boolPinky)
+            { 
+                listGhosts.Add(new Ghost(rectSpawnPoint.X, rectSpawnPoint.Y, Color.Pink, arrMaze, intCellSize, "Pinky", this, new Point(1, 1), Ghost.Phases.Chase));
+                boolPinky = true;
+            
+            }
+            
+            await Task.Delay(5000); //inky leaves
+            if (!boolInky)
+            { 
+                listGhosts.Add(new Ghost(rectSpawnPoint.X, rectSpawnPoint.Y, Color.Cyan, arrMaze, intCellSize, "Inky", this, new Point(1, 1), Ghost.Phases.Chase));
+                boolInky = true;
+            }
+            
+            await Task.Delay(7000); //clyde leaves
+            if (!boolClyde)
+                { 
+                listGhosts.Add(new Ghost(rectSpawnPoint.X, rectSpawnPoint.Y, Color.Orange, arrMaze, intCellSize, "Clyde", this, new Point(1, 1), Ghost.Phases.Chase));
+                boolClyde = true;
+            }
             { "Blinky", Color.Red },
             { "Pinky", Color.Pink },
             { "Inky", Color.Cyan },
