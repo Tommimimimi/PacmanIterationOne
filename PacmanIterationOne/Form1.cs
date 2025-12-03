@@ -109,7 +109,7 @@ namespace pIterationOne
             intPlayerSpeed = intCellSize / 8;
             rectPlayer = new Rectangle(intPlayerX, intPlayerY, intCellSize, intCellSize);
             intPlayerLives = 3;
-            
+
 
             //creating the label and setting attributes
             lblScore.Location = new Point(ClientSize.Width - lblScore.Width * 2, 0);
@@ -179,7 +179,7 @@ namespace pIterationOne
             this.Interface.TopMost = false;
             this.TopMost = true;
             this.TopMost = false;
-            this.Activate();            
+            this.Activate();
         }
 
 
@@ -269,7 +269,7 @@ namespace pIterationOne
                         testCol = paraCol + 2;
                         break;
                 }
-                
+
                 if (testRow > 0 && testRow < intMazeX && testCol > 0 && testCol < intMazeY
                     && arrMaze[testRow, testCol] == 1)
                 {
@@ -373,7 +373,7 @@ namespace pIterationOne
                     spawnX += 1;
                 }
             }
-            
+
         }
 
         private void MazeCreate()
@@ -803,59 +803,6 @@ namespace pIterationOne
 
         Dictionary<string, Color> GhostColors = new Dictionary<string, Color>
         {
-            bool boolBlinky = false;
-            bool boolPinky = false;
-            bool boolInky = false;
-            bool boolClyde = false;
-            foreach (Ghost ghost in listGhosts)
-            {
-                if (ghost.name == "Blinky")
-                {
-                    boolBlinky = true;
-                }
-                if (ghost.name == "Pinky")
-                {
-                    boolPinky = true;
-                }
-                if (ghost.name == "Inky")
-                {
-                    boolInky = true;
-                }
-                if (ghost.name == "Clyde")
-                {
-                    boolClyde = true;
-                }
-            }
-
-            await Task.Delay(2000); //blinky leaves
-            if (!boolBlinky)
-            {
-                listGhosts.Add(new Ghost(rectSpawnPoint.X, rectSpawnPoint.Y, Color.Red, arrMaze, intCellSize, "Blinky", this, new Point(1, 1), Ghost.Phases.Chase));
-                boolBlinky = false;
-            }
-
-            
-            await Task.Delay(3000); //pinky leaves
-            if (!boolPinky)
-            { 
-                listGhosts.Add(new Ghost(rectSpawnPoint.X, rectSpawnPoint.Y, Color.Pink, arrMaze, intCellSize, "Pinky", this, new Point(1, 1), Ghost.Phases.Chase));
-                boolPinky = true;
-            
-            }
-            
-            await Task.Delay(5000); //inky leaves
-            if (!boolInky)
-            { 
-                listGhosts.Add(new Ghost(rectSpawnPoint.X, rectSpawnPoint.Y, Color.Cyan, arrMaze, intCellSize, "Inky", this, new Point(1, 1), Ghost.Phases.Chase));
-                boolInky = true;
-            }
-            
-            await Task.Delay(7000); //clyde leaves
-            if (!boolClyde)
-                { 
-                listGhosts.Add(new Ghost(rectSpawnPoint.X, rectSpawnPoint.Y, Color.Orange, arrMaze, intCellSize, "Clyde", this, new Point(1, 1), Ghost.Phases.Chase));
-                boolClyde = true;
-            }
             { "Blinky", Color.Red },
             { "Pinky", Color.Pink },
             { "Inky", Color.Cyan },
@@ -873,7 +820,7 @@ namespace pIterationOne
         {
             await Task.Delay(2000); //blinky leaves
             TryRelease(GhostColors.Keys.ToArray()[0]);
-            
+
             await Task.Delay(3000); //pinky leaves
             TryRelease(GhostColors.Keys.ToArray()[1]);
 
@@ -964,6 +911,6 @@ namespace pIterationOne
                 Invalidate();
             }
             return;
-        }        
+        }
     }
 }
