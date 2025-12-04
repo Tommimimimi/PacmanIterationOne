@@ -46,6 +46,7 @@ namespace pIterationOne
             intArrayOfStrLen = 60,
             intGhostPhaCount,
             intPlayerLives,
+            intPelletCount,
             intDisposeCount;
 
         //declare current and next direction variables
@@ -95,6 +96,9 @@ namespace pIterationOne
             //choose random numbers for maze size
             intMazeX = rnd.Next(11, 14);
             intMazeY = rnd.Next(16, 20);
+
+            intMazeX = rnd.Next(8, 10);
+            intMazeY = rnd.Next(8, 10);
             //make sure maze dimensions are odd numbers in order for maze pathing
             intMazeX = intMazeX * 2 + 1;
             intMazeY = intMazeY * 2 + 1;
@@ -350,9 +354,13 @@ namespace pIterationOne
                 for (int y = 0; y < intMazeY; y++)
                 {
                     if (arrMaze[x, y] == 0)
+                    {
                         arrMaze[x, y] = 2;
+                        intPelletCount++;
+                    }
                 }
             }
+            AddStringToQueue($"There are: {intPelletCount} pellets");
         }
 
         private void FindSuitableGhostSpawn()
@@ -546,6 +554,7 @@ namespace pIterationOne
                         if (rectNewEntity.IntersectsWith(pellet))
                         {
                             arrMaze[row, col] = 0;
+                            intPelletCount--;
                             intScore += 10;
                         }
                     }
@@ -808,6 +817,7 @@ namespace pIterationOne
             { "Inky", Color.Cyan },
             { "Clyde", Color.Orange }
         };
+
         private void TryRelease(string name)
         {
             foreach (Ghost g in listGhosts)
@@ -893,7 +903,7 @@ namespace pIterationOne
                 MovePlayer();
                 ReleaseGhosts();
                 MoveGhosts();
-                GhostCollisionCheck();
+                //GhostCollisionCheck();
                 UpdateGhostChasePoints();
                 foreach (Ghost ghost in listGhosts)
                 {
