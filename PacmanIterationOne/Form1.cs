@@ -94,11 +94,11 @@ namespace pIterationOne
             this.MaximizeBox = false;
 
             //choose random numbers for maze size
-            intMazeX = rnd.Next(11, 14);
-            intMazeY = rnd.Next(16, 20);
+            //intMazeX = rnd.Next(11, 14);
+            //intMazeY = rnd.Next(16, 20);
 
-            intMazeX = rnd.Next(8, 10);
-            intMazeY = rnd.Next(8, 10);
+            intMazeX = rnd.Next(4, 6);
+            intMazeY = rnd.Next(4, 6);
             //make sure maze dimensions are odd numbers in order for maze pathing
             intMazeX = intMazeX * 2 + 1;
             intMazeY = intMazeY * 2 + 1;
@@ -903,7 +903,7 @@ namespace pIterationOne
                 MovePlayer();
                 ReleaseGhosts();
                 MoveGhosts();
-                //GhostCollisionCheck();
+                GhostCollisionCheck();
                 UpdateGhostChasePoints();
                 foreach (Ghost ghost in listGhosts)
                 {
@@ -917,6 +917,11 @@ namespace pIterationOne
                 }
                 UpdateTerminal();
                 fltMouthAngle = (float)swMouthTime.Elapsed.TotalSeconds * 7;
+                if (intPelletCount == 0)
+                {
+                    OriginalPos();
+                    MazeCreate();
+                }
                 Thread.Sleep(20);
                 Invalidate();
             }
