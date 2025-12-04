@@ -8,6 +8,7 @@ using pIterationOne;
 namespace pIterationOne
 {
     //define different directions as named constants in enum
+
     public enum Direction
     {
         Up,
@@ -16,7 +17,6 @@ namespace pIterationOne
         Right,
         None
     }
-
 
     public partial class Form1 : Form
     {
@@ -28,8 +28,14 @@ namespace pIterationOne
             { Direction.Right, 0 },
             { Direction.None, 0 }
         };
-        //define empty maze
-        int[,] arrMaze;
+
+        Dictionary<string, Color> GhostColors = new Dictionary<string, Color>
+        {
+            { "Blinky", Color.Red },
+            { "Pinky", Color.Pink },
+            { "Inky", Color.Cyan },
+            { "Clyde", Color.Orange }
+        };
 
         //declare empty integers to define using cellsize
         private int
@@ -49,34 +55,46 @@ namespace pIterationOne
             intPelletCount,
             intDisposeCount;
 
+        //define empty maze
+        int[,] arrMaze;
+
+        //mouth angle
+        float fltMouthAngle = 0;
+
         //declare current and next direction variables
         Direction
             dirCurrent = Direction.None,
             dirNext = Direction.None;
 
-        Random rnd = new Random();
+        //declare booleans
+        bool
+            threadRunning = true,
+            boolChase = false,
+            restarted = false;
 
-        //create system resources
+        //declare thread
+        Thread
+            thrdGameLoop,
+            thrdGarbageDispose,
+            thrdGhostPhases;
 
-        Thread thrdGameLoop;
-        Thread thrdGarbageDispose;
-        Thread thrdGhostPhases;
-        Rectangle rectPlayer;
-        Rectangle rectSpawnPoint;
+        //declare label
+        Label
+            lblScore,
+            lblInterface;
+
+        //declare rectangle
+        Rectangle
+            rectPlayer,
+            rectSpawnPoint;
+
 
         List<Ghost> listGhosts = new List<Ghost>();
         Brush brush = new SolidBrush(Color.FromArgb(200, 20, 20, 20));
-
-        float fltMouthAngle = 0;
-
         Stopwatch swMouthTime = new Stopwatch();
-        Label lblScore = new Label();
-        bool threadRunning = true;
-        bool boolChase = false;
-        Label lblInterface;
         Form Interface = new Form();
         Queue<string> interfaceStrings;
-
+        Random rnd = new Random();
 
         public Form1()
         {
@@ -90,15 +108,12 @@ namespace pIterationOne
             interfaceStrings = new Queue<string>(intArrayOfStrLen);
 
             InitializeComponent();
-            //ResetGame();
             this.MaximizeBox = false;
 
             //choose random numbers for maze size
-            //intMazeX = rnd.Next(11, 14);
-            //intMazeY = rnd.Next(16, 20);
-
             intMazeX = rnd.Next(4, 6);
             intMazeY = rnd.Next(4, 6);
+
             //make sure maze dimensions are odd numbers in order for maze pathing
             intMazeX = intMazeX * 2 + 1;
             intMazeY = intMazeY * 2 + 1;
@@ -810,14 +825,6 @@ namespace pIterationOne
             }
         }
 
-        Dictionary<string, Color> GhostColors = new Dictionary<string, Color>
-        {
-            { "Blinky", Color.Red },
-            { "Pinky", Color.Pink },
-            { "Inky", Color.Cyan },
-            { "Clyde", Color.Orange }
-        };
-
         private void TryRelease(string name)
         {
             foreach (Ghost g in listGhosts)
@@ -881,7 +888,7 @@ namespace pIterationOne
                 boolDeath = false;
             }
         }
-        private bool restarted = false;
+
         private void ResetGame()
         {
             if (!restarted)
