@@ -146,6 +146,7 @@ namespace pIterationOne
             rectPlayer = new Rectangle(intPlayerX, intPlayerY, intCellSize, intCellSize);
             intPlayerLives = 3;
 
+            ghostReleaseCTS = new CancellationTokenSource();
 
             ghostReleaseCTS = new CancellationTokenSource();
 
