@@ -2,6 +2,15 @@
 
 public class Ghost
 {
+    public Dictionary<Direction, float> directionAngle = new()
+        {
+            { Direction.Up, 270 },
+            { Direction.Down, 90 },
+            { Direction.Left, 180 },
+            { Direction.Right, 0 },
+            { Direction.None, 0 }
+        };
+
     public int X;
     public int Y;
     public float ghostSpeed;
@@ -53,5 +62,10 @@ public class Ghost
     public void Draw(Graphics g)
     {
         g.FillEllipse(new SolidBrush(color), rectGhost);
-    }   
+    }
+    
+    public void DrawAsPacman(Graphics g, Direction dir, float mouthAngle)
+    {
+        g.FillPie(new SolidBrush(color), rectGhost, directionAngle[dir] + mouthAngle + MathF.Sin(mouthAngle), 360 - (2 * mouthAngle) + MathF.Sin(mouthAngle));
+    }
 }

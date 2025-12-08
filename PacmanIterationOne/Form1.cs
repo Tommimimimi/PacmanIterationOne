@@ -145,7 +145,7 @@ namespace pIterationOne
             //initialize player position and speed
             intPlayerX = intCellSize;
             intPlayerY = intCellSize;
-            intPlayerSpeed = intCellSize / 8;
+            intPlayerSpeed = intCellSize / 2;
             rectPlayer = new Rectangle(intPlayerX, intPlayerY, intCellSize, intCellSize);
             intPlayerLives = 3;
 
@@ -500,7 +500,7 @@ namespace pIterationOne
                 mouthAngle = (MathF.Sin(fltMouthAngle * 3 + float.Pi / 6) + 0.9f) * 20;
             }
 
-            //always draw yellow man waka angle
+            //draw pacman on top
             g.FillPie(Brushes.Yellow, rectPlayer, directionAngle[dirCurrent] + mouthAngle, 360 - (2 * mouthAngle));
 
 
@@ -509,7 +509,7 @@ namespace pIterationOne
             {
                 foreach (Ghost ghost in ghosts)
                 {
-                    ghost.Draw(g);
+                    ghost.DrawAsPacman(g, ghost.dirCurrent, mouthAngle);
                 }
             }
             g.FillEllipse(Brushes.FloralWhite, rectSpawnPoint);
@@ -523,7 +523,7 @@ namespace pIterationOne
                 fltDeathAngle += 15;
                 dirCurrent = Direction.Up;
                 Invalidate();
-                Thread.Sleep(225);
+                Thread.Sleep(150);
             }
             boolDeath = false;
         }
@@ -682,11 +682,11 @@ namespace pIterationOne
                     int targetX = ghost.nextTile.X * intCellSize;
                     int targetY = ghost.nextTile.Y * intCellSize;
 
-                    // Save previous position
+                    //save previous position
                     ghost.prevX = ghost.X;
                     ghost.prevY = ghost.Y;
 
-                    // Move toward target tile
+                    //move toward target tile
                     if (Math.Abs(targetX - ghost.X) > Math.Abs(targetY - ghost.Y))
                     {
                         ghost.X += (int)(Math.Sign(targetX - ghost.X) * ghost.ghostSpeed);
@@ -700,12 +700,11 @@ namespace pIterationOne
                             ghost.Y = ghost.prevY;
                     }
 
-                    // Update direction
-                    if (ghost.X < targetX) ghost.dirCurrent = Direction.Right;
-                    else if (ghost.X > targetX) ghost.dirCurrent = Direction.Left;
-                    else if (ghost.Y < targetY) ghost.dirCurrent = Direction.Down;
-                    else if (ghost.Y > targetY) ghost.dirCurrent = Direction.Up;
-                    else ghost.dirCurrent = Direction.None;
+                    if (ghost.X > ghost.prevX) ghost.dirCurrent = Direction.Right;
+                    else if (ghost.X < ghost.prevX) ghost.dirCurrent = Direction.Left;
+                    else if (ghost.Y > ghost.prevY) ghost.dirCurrent = Direction.Down;
+                    else if (ghost.Y < ghost.prevY) ghost.dirCurrent = Direction.Up;
+
                     ghost.UpdateRectangle();
                 }
             }
@@ -1063,8 +1062,7 @@ namespace pIterationOne
                 MovePlayer();
                 SpawnGhosts();
                 MoveGhosts();
-                if (boolCollision)
-                    GhostCollisionCheck();
+                if (boolCollision) GhostCollisionCheck();
                 UpdateGhostChasePoints();
                 lock (ghostLock)
                 {
@@ -1081,11 +1079,28 @@ namespace pIterationOne
                 }
                 UpdateTerminal();
                 fltMouthAngle = (float)swMouthTime.Elapsed.TotalSeconds * 7;
-                if (intPelletCount == 0)
+                if (intPelletCount <= 150)
                 {
-                    OriginalPos();
+                    //death = true to play animation and turn off
+                    //collision so only one life is removed
+                    boolDeath = true;
+                    boolCollision = false;
+                    fltDeathAngle = 0;
+                    swMouthTime.Reset();
+
+                    intPelletCount = 0;
                     MazeCreate();
-                    SpawnGhosts();
+
+                    //play animation
+                    DeathAnimation();
+
+                    //reset original positions and make death false
+                    //for normal animation and add back collision
+                    OriginalPos();
+                    boolDeath = false;
+                    boolCollision = true;
+                    //allow ghosts to respawn
+                    boolGhosts = false;
                 }
                 Thread.Sleep(20);
                 Invalidate();
