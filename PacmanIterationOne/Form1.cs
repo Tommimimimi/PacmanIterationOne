@@ -145,7 +145,7 @@ namespace pIterationOne
             //initialize player position and speed
             intPlayerX = intCellSize;
             intPlayerY = intCellSize;
-            intPlayerSpeed = intCellSize / 2;
+            intPlayerSpeed = intCellSize / 8;
             rectPlayer = new Rectangle(intPlayerX, intPlayerY, intCellSize, intCellSize);
             intPlayerLives = 3;
 
