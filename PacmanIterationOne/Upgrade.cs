@@ -35,13 +35,13 @@ namespace PacmanIterationOne
     public class Upgrade
     {
         //core identity and ui information
-        public UpgradeType Type { get; }
-        public string Name { get; }
-        public string Description { get; }
+        public UpgradeType Type { get; init; }
+        public string Name { get; init; }
+        public string Description { get; init; }
 
         //stacking rules and tracking
-        public bool Stackable { get; }
-        public int MaxStacks { get; }
+        public bool Stackable { get; init; }
+        public int MaxStacks { get; init; }
         public int CurrentStacks { get; private set; }
 
         //logic that will help apply the upgrade effect to the player and ghosts
@@ -77,7 +77,7 @@ namespace PacmanIterationOne
                 return false;
 
             CurrentStacks++;
-
+            Apply();
             return true;
         }
     }
