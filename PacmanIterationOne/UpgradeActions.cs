@@ -13,6 +13,5 @@ namespace PacmanIterationOne
             //increase player movement speed by 50%
             pSpeed += pSpeed / 2;
         }
-
     }
 }

@@ -51,6 +51,7 @@ namespace pIterationOne
             intPlayerX,
             intPlayerY,
             intPlayerSpeed,
+            doubleSpeed,
             intMazeX,
             intMazeY,
             intScore,
@@ -146,6 +147,7 @@ namespace pIterationOne
             intPlayerX = intCellSize;
             intPlayerY = intCellSize;
             intPlayerSpeed = intCellSize / 8;
+            doubleSpeed = intPlayerSpeed * 2;
             rectPlayer = new Rectangle(intPlayerX, intPlayerY, intCellSize, intCellSize);
             intPlayerLives = 3;
 
@@ -1044,17 +1046,17 @@ namespace pIterationOne
                 ReleaseGhosts(ghostReleaseCTS.Token);
             }
         }
-
+        
         private async void ApplySprint()
-        { 
-            int doubleSpeed = intPlayerSpeed * 2;
+        {
+            int temp = intPlayerSpeed;
             intPlayerSpeed = doubleSpeed;
             //dash lasts for 0.5 seconds
-            await Task.Delay(5000);
+            await Task.Delay(750);
             //revert speed back to normal
-            intPlayerSpeed = doubleSpeed;          
+            intPlayerSpeed = temp;
         }
-
+        
         private void ShowGetReady(int milliseconds)
         {
             //freeze movement
