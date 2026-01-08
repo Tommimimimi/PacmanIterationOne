@@ -603,6 +603,7 @@ namespace pIterationOne
                 {
                     dirCurrent = Direction.None;
                     AddStringToQueue($"Player collision in ({tryX / intCellSize}, {tryY / intCellSize}) at {DateTime.Now.ToLongTimeString()}");
+                    ApplySprint();
                     swMouthTime.Reset();
                 }
             }
@@ -1042,6 +1043,16 @@ namespace pIterationOne
             {
                 ReleaseGhosts(ghostReleaseCTS.Token);
             }
+        }
+
+        private async void ApplySprint()
+        { 
+            int doubleSpeed = intPlayerSpeed * 2;
+            intPlayerSpeed = doubleSpeed;
+            //dash lasts for 0.5 seconds
+            await Task.Delay(5000);
+            //revert speed back to normal
+            intPlayerSpeed = doubleSpeed;          
         }
 
         private void ShowGetReady(int milliseconds)

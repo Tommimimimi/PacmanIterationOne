@@ -14,11 +14,5 @@ namespace PacmanIterationOne
             pSpeed += pSpeed / 2;
         }
 
-        public static void ApplyDash(ref int pSpeed)
-        {
-            //increase player movement speed by 100%
-            pSpeed *= 2;
-        }
-
     }
 }
