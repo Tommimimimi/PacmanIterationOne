@@ -489,7 +489,7 @@ namespace pIterationOne
                     }
                 }
             }
-            
+
             g.FillRectangle(Brushes.Black, rectSpawnPoint);
             float mouthAngle;
             if (boolDeath)
@@ -512,16 +512,16 @@ namespace pIterationOne
             g.FillPie(Brushes.Yellow, rectPlayer, directionAngle[dirCurrent] + mouthAngle, 360 - (2 * mouthAngle));
 
 
-                Ghost[] ghosts = [.. listGhosts];
-                lock (ghostLock)
+            Ghost[] ghosts = [.. listGhosts];
+            lock (ghostLock)
+            {
+                foreach (Ghost ghost in ghosts)
                 {
-                    foreach (Ghost ghost in ghosts)
-                    {
-                        ghost.DrawAsPacman(g, ghost.dirCurrent, mouthAngle);
-                    }
+                    ghost.DrawAsPacman(g, ghost.dirCurrent, mouthAngle);
                 }
-                g.FillEllipse(Brushes.FloralWhite, rectSpawnPoint);
-                lblScore.Text = "Score: " + Convert.ToString(intScore);  
+            }
+            g.FillEllipse(Brushes.FloralWhite, rectSpawnPoint);
+            lblScore.Text = "Score: " + Convert.ToString(intScore);
         }
 
         private void DeathAnimation()
@@ -603,6 +603,10 @@ namespace pIterationOne
                 }
                 else
                 {
+                    if (intPlayerX % intCellSize != 0)
+                    {
+                        int difference;
+                    }
                     dirCurrent = Direction.None;
                     AddStringToQueue($"Player collision in ({tryX / intCellSize}, {tryY / intCellSize}) at {DateTime.Now.ToLongTimeString()}");
                     ApplySprint();
@@ -732,7 +736,7 @@ namespace pIterationOne
             {
                 foreach (Ghost ghost in listGhosts)
                 {
-                    ghost.chasePoint = ghost.currPhase 
+                    ghost.chasePoint = ghost.currPhase
                         switch
                     {
                         //checks if ghost is in chase or scatter and gets relevant point
@@ -907,7 +911,7 @@ namespace pIterationOne
                 new Point(1, 1), Ghost.Phases.Chase));
 
             //mark released
-            ghostReleased[name] = true; 
+            ghostReleased[name] = true;
         }
 
 
@@ -1046,23 +1050,23 @@ namespace pIterationOne
                 ReleaseGhosts(ghostReleaseCTS.Token);
             }
         }
-        
+
         private async void ApplySprint()
         {
             int temp = intPlayerSpeed;
             intPlayerSpeed = doubleSpeed;
-            //dash lasts for 0.5 seconds
-            await Task.Delay(750);
+            //dash lasts for 0.6 seconds
+            await Task.Delay(600);
             //revert speed back to normal
             intPlayerSpeed = temp;
         }
-        
+
         private void ShowGetReady(int milliseconds)
         {
             //freeze movement
             boolReady = false;
             AddStringToQueue("GET READY!");
-            
+
             //force redraw
             Invalidate();
 
@@ -1070,17 +1074,17 @@ namespace pIterationOne
             Thread.Sleep(milliseconds);
 
             // unfreeze movement
-            boolReady = true; 
+            boolReady = true;
         }
 
-            private void GameLoop()
+        private void GameLoop()
         {
             MazeCreate();
             //1.5 second delay
             ShowGetReady(1500);
 
             while (threadRunning)
-            {           
+            {
                 MovePlayer();
                 SpawnGhosts();
                 MoveGhosts();
