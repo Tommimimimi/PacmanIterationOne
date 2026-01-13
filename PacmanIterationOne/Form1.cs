@@ -63,6 +63,7 @@ namespace pIterationOne
             intGhostPhaCount,
             intPlayerLives,
             intPelletCount,
+            intSprintDuration = 5000,
             intDisposeCount;
 
         //define empty maze
@@ -89,6 +90,7 @@ namespace pIterationOne
             boolDeath = false,
             boolCollision = true,
             boolReady = false,
+            boolSprint = false,
             restarted = false;
 
         //declare threads
@@ -605,7 +607,11 @@ namespace pIterationOne
                 {
                     if (intPlayerX % intCellSize != 0)
                     {
-                        int difference;
+                        CentrePlayer(ref intPlayerX);
+                    }
+                    if (intPlayerY % intCellSize != 0)
+                    {
+                        CentrePlayer(ref intPlayerY);
                     }
                     dirCurrent = Direction.None;
                     AddStringToQueue($"Player collision in ({tryX / intCellSize}, {tryY / intCellSize}) at {DateTime.Now.ToLongTimeString()}");
@@ -617,6 +623,13 @@ namespace pIterationOne
             rectPlayer = new Rectangle(intPlayerX, intPlayerY, intCellSize, intCellSize);
             //force refresh
             Invalidate();
+        }
+
+        public void CentrePlayer(ref int pInt)
+        {
+            int nearestCell = (int)(Math.Floor(pInt / (float)intCellSize));
+            nearestCell++;
+            pInt = nearestCell * intCellSize;
         }
 
 
@@ -1051,14 +1064,15 @@ namespace pIterationOne
             }
         }
 
-        private async void ApplySprint()
+        private void ApplySprint()
         {
-            int temp = intPlayerSpeed;
-            intPlayerSpeed = doubleSpeed;
-            //dash lasts for 0.6 seconds
-            await Task.Delay(600);
-            //revert speed back to normal
-            intPlayerSpeed = temp;
+            //TODO FIX
+           int temp = intPlayerSpeed;
+           for (int i = 100000; i > 0; i--)
+            {
+                intPlayerSpeed = doubleSpeed;
+            }
+           intPlayerSpeed = temp;
         }
 
         private void ShowGetReady(int milliseconds)
@@ -1088,7 +1102,7 @@ namespace pIterationOne
                 MovePlayer();
                 SpawnGhosts();
                 MoveGhosts();
-                if (boolCollision) GhostCollisionCheck();
+                //if (boolCollision) GhostCollisionCheck();
                 UpdateGhostChasePoints();
                 lock (ghostLock)
                 {
