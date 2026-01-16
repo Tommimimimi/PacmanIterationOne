@@ -1064,15 +1064,19 @@ namespace pIterationOne
             }
         }
 
-        private void ApplySprint()
+        private async void ApplySprint()
         {
-            //TODO FIX
-           int temp = intPlayerSpeed;
-           for (int i = 100000; i > 0; i--)
+            if (!boolSprint)
             {
+                boolSprint = true;
+                int temp = intPlayerSpeed;
                 intPlayerSpeed = doubleSpeed;
+                //dash lasts for 0.6 seconds
+                await Task.Delay(1000);
+                //revert speed back to normal
+                intPlayerSpeed = temp;
+                boolSprint = false;
             }
-           intPlayerSpeed = temp;
         }
 
         private void ShowGetReady(int milliseconds)
