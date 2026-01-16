@@ -45,6 +45,11 @@ namespace pIterationOne
             { "Clyde", false }
         };
 
+        Dictionary<Point, int> corners = new Dictionary<Point, int>
+            {
+                
+            };
+
 
         //declare empty integers to define using cellsize
         private int
@@ -137,9 +142,22 @@ namespace pIterationOne
             intMazeX = rnd.Next(6, 8);
             intMazeY = rnd.Next(12, 16);
 
+            intMazeX = rnd.Next(5, 7);
+            intMazeY = rnd.Next(4, 5);
+
             //make sure maze dimensions are odd numbers in order for maze pathing
             intMazeX = intMazeX * 2 + 1;
             intMazeY = intMazeY * 2 + 1;
+
+            corners = new Dictionary<Point, int>
+            {
+                { new Point(1, 1), 0 },                         //top left
+                { new Point(1, intMazeY), 1 },              //top right
+                { new Point(intMazeX, 1), 2 },              //bottom left
+                { new Point(intMazeX, intMazeY), 3 }    //bottom right
+            };
+
+            AddStringToQueue($"1, {intMazeY - 1}\n {intMazeX - 1}, 1");
 
             //initialize maze array and form size
             arrMaze = new int[intMazeX, intMazeY];
@@ -364,6 +382,40 @@ namespace pIterationOne
                     //checks for deadend
                     if (walls == 3)
                     {
+                        Point cornerCheck = new Point(row, col);
+                        if (corners.ContainsKey(cornerCheck))
+                        {
+                            
+                            switch (corners[cornerCheck])
+                            {
+                                case 0: //top left
+                                    arrMaze[row + 1, col] = 0;
+                                    arrMaze[row, col + 1] = 0;
+                                    break;
+
+                                case 1: //top right
+                                    arrMaze[row, col - 1] = 0;
+                                    arrMaze[row, col + 1] = 0;
+                                    arrMaze[row - 1, col] = 0;
+                                    arrMaze[row + 1, col] = 0;
+                                    break;
+
+                                case 2: //bottom left
+                                    arrMaze[row, col - 1] = 0;
+                                    arrMaze[row, col + 1] = 0;
+                                    arrMaze[row - 1, col] = 0;
+                                    arrMaze[row + 1, col] = 0;
+                                    break;
+
+                                case 3: //bottom right
+                                    arrMaze[row, col - 1] = 0;
+                                    arrMaze[row, col + 1] = 0;
+                                    arrMaze[row - 1, col] = 0;
+                                    arrMaze[row + 1, col] = 0;
+                                    break;
+                            }
+                            
+                        }
                         switch (dirOpenCell)
                         {
                             case Direction.Left:
@@ -428,7 +480,7 @@ namespace pIterationOne
             bool suitableSpawn = false;
             while (!suitableSpawn)
             {
-                if (arrMaze[spawnX, spawnY] == 0)
+                RRif (arrMaze[spawnX, spawnY] == 0)
                 {
                     arrMaze[spawnX, spawnY] = -1;
                     rectSpawnPoint = new Rectangle(spawnY * intCellSize, spawnX * intCellSize, intCellSize, intCellSize);
