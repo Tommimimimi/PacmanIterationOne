@@ -389,10 +389,10 @@ namespace pIterationOne
 
                     //remove any option that would carve into boundary
                     carveOptions.RemoveAll(d =>
-                    {
+
                         int nRow = row, nCol = col;
                         switch (d)
-                        {
+                    {
                             case Direction.Up: nRow = row - 1; break;
                             case Direction.Down: nRow = row + 1; break;
                             case Direction.Left: nCol = col - 1; break;
@@ -404,7 +404,7 @@ namespace pIterationOne
                     //failsafe incase impossible
                     if (carveOptions.Count == 0)
                         continue;
-
+                                    arrMaze[row - 1, col] = 0;
                     //pick one randomly
                     Direction chosen = carveOptions[rnd.Next(carveOptions.Count)];
 
@@ -415,11 +415,23 @@ namespace pIterationOne
                         case Direction.Down: arrMaze[row + 1, col] = 0; break;
                         case Direction.Left: arrMaze[row, col - 1] = 0; break;
                         case Direction.Right: arrMaze[row, col + 1] = 0; break;
+                    if (carveOptions.Count == 0)
+                        continue;
+
+                    //pick one (random is good so mazes dont all look the same)
+                    Direction chosen = carveOptions[rnd.Next(carveOptions.Count)];
+
+                    //carve
+                    switch (chosen)
+                    {
+                        case Direction.Up: arrMaze[row - 1, col] = 0; break;
+                        case Direction.Down: arrMaze[row + 1, col] = 0; break;
+                        case Direction.Left: arrMaze[row, col - 1] = 0; break;
+                        case Direction.Right: arrMaze[row, col + 1] = 0; break;
                     }
                 }
             }
         }
-
         private void BoundaryReadd()
         {
             //go through each dimension setting 0 values to 1
