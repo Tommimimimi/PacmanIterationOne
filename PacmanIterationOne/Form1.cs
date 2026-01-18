@@ -142,9 +142,6 @@ namespace pIterationOne
             intMazeX = rnd.Next(6, 8);
             intMazeY = rnd.Next(12, 16);
 
-            intMazeX = rnd.Next(5, 7);
-            intMazeY = rnd.Next(4, 5);
-
             //make sure maze dimensions are odd numbers in order for maze pathing
             intMazeX = intMazeX * 2 + 1;
             intMazeY = intMazeY * 2 + 1;
@@ -361,80 +358,68 @@ namespace pIterationOne
             {
                 for (int col = 1; col < intMazeY - 1; col++)
                 {
-                    //set walls check to 0
+                    //ignore regular maze paths
+                    if (arrMaze[row, col] != 0)
+                        continue;
+
                     int walls = 0;
 
-                    //stores the cell opposite the single open cell within a deadend
-                    Direction? dirOpenCell = null;
+                    //check for where walls are
+                    bool upWall = arrMaze[row - 1, col] == 1;
+                    bool downWall = arrMaze[row + 1, col] == 1;
+                    bool leftWall = arrMaze[row, col - 1] == 1;
+                    bool rightWall = arrMaze[row, col + 1] == 1;
 
-                    if (arrMaze[row - 1, col] == 1) { walls++; }
-                    else { dirOpenCell = Direction.Down; }
+                    //update counter
+                    if (upWall) walls++;
+                    if (downWall) walls++;
+                    if (leftWall) walls++;
+                    if (rightWall) walls++;
 
-                    if (arrMaze[row + 1, col] == 1) { walls++; }
-                    else { dirOpenCell = Direction.Up; }
+                    //ignore non dead ends
+                    if (walls != 3)
+                        continue;
 
-                    if (arrMaze[row, col - 1] == 1) { walls++; }
-                    else { dirOpenCell = Direction.Right; }
+                    //find possible carve directions
+                    List<Direction> carveOptions = new List<Direction>(3);
+                    if (upWall) carveOptions.Add(Direction.Up);
+                    if (downWall) carveOptions.Add(Direction.Down);
+                    if (leftWall) carveOptions.Add(Direction.Left);
+                    if (rightWall) carveOptions.Add(Direction.Right);
 
-                    if (arrMaze[row, col + 1] == 1) { walls++; }
-                    else { dirOpenCell = Direction.Left; }
-
-                    //checks for deadend
-                    if (walls == 3)
+                    //remove any option that would carve into boundary
+                    carveOptions.RemoveAll(d =>
                     {
-                        Point cornerCheck = new Point(row, col);
-                        if (corners.ContainsKey(cornerCheck))
+                        int nRow = row, nCol = col;
+                        switch (d)
                         {
-                            
-                            switch (corners[cornerCheck])
-                            {
-                                case 0: //top left
-                                    arrMaze[row + 1, col] = 0;
-                                    arrMaze[row, col + 1] = 0;
-                                    break;
-
-                                case 1: //top right
-                                    arrMaze[row, col - 1] = 0;
-                                    arrMaze[row, col + 1] = 0;
-                                    arrMaze[row - 1, col] = 0;
-                                    arrMaze[row + 1, col] = 0;
-                                    break;
-
-                                case 2: //bottom left
-                                    arrMaze[row, col - 1] = 0;
-                                    arrMaze[row, col + 1] = 0;
-                                    arrMaze[row - 1, col] = 0;
-                                    arrMaze[row + 1, col] = 0;
-                                    break;
-
-                                case 3: //bottom right
-                                    arrMaze[row, col - 1] = 0;
-                                    arrMaze[row, col + 1] = 0;
-                                    arrMaze[row - 1, col] = 0;
-                                    arrMaze[row + 1, col] = 0;
-                                    break;
-                            }
-                            
+                            case Direction.Up: nRow = row - 1; break;
+                            case Direction.Down: nRow = row + 1; break;
+                            case Direction.Left: nCol = col - 1; break;
+                            case Direction.Right: nCol = col + 1; break;
                         }
-                        switch (dirOpenCell)
-                        {
-                            case Direction.Left:
-                                arrMaze[row, col - 1] = 0;
-                                break;
-                            case Direction.Right:
-                                arrMaze[row, col + 1] = 0;
-                                break;
-                            case Direction.Up:
-                                arrMaze[row - 1, col] = 0;
-                                break;
-                            case Direction.Down:
-                                arrMaze[row + 1, col] = 0;
-                                break;
-                        }
+                        return nRow == 0 || nRow == intMazeX - 1 || nCol == 0 || nCol == intMazeY - 1;
+                    });
+
+                    //failsafe incase impossible
+                    if (carveOptions.Count == 0)
+                        continue;
+
+                    //pick one randomly
+                    Direction chosen = carveOptions[rnd.Next(carveOptions.Count)];
+
+                    //carve the wall
+                    switch (chosen)
+                    {
+                        case Direction.Up: arrMaze[row - 1, col] = 0; break;
+                        case Direction.Down: arrMaze[row + 1, col] = 0; break;
+                        case Direction.Left: arrMaze[row, col - 1] = 0; break;
+                        case Direction.Right: arrMaze[row, col + 1] = 0; break;
                     }
                 }
             }
         }
+
         private void BoundaryReadd()
         {
             //go through each dimension setting 0 values to 1
@@ -480,7 +465,7 @@ namespace pIterationOne
             bool suitableSpawn = false;
             while (!suitableSpawn)
             {
-                RRif (arrMaze[spawnX, spawnY] == 0)
+                if (arrMaze[spawnX, spawnY] == 0)
                 {
                     arrMaze[spawnX, spawnY] = -1;
                     rectSpawnPoint = new Rectangle(spawnY * intCellSize, spawnX * intCellSize, intCellSize, intCellSize);
