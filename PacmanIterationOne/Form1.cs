@@ -1371,7 +1371,7 @@ namespace pIterationOne
             upgradeManager.Register(new Upgrade(
                 UpgradeType.sprint,
                 "rage sprint",
-                "after pacman crashes into a wall he sprints at x2 speed for  ",
+                "after pacman crashes into a wall he sprints at x2 speed for 0.85 seconds",
                 () => { hasSprint = true; },
                 stackable: true,
                 maxStacks: 3
@@ -1402,7 +1402,7 @@ namespace pIterationOne
 
             upgradeManager.Register(new Upgrade(
                 UpgradeType.slowghost,
-                "thwarter",
+                "thwart'r",
                 "ghosts move 10% slower (stacks x3)",
                 () => { ghostSpeedMultiplier *= 0.90f; },
                 stackable: true,
@@ -1412,10 +1412,8 @@ namespace pIterationOne
             upgradeManager.Register(new Upgrade(
                 UpgradeType.phasedelay,
                 "phase delay",
-                "scatter lasts +3 seconds (stacks x3)",
-                () => { scatterSeconds += 3; },
-                stackable: true,
-                maxStacks: 3
+                "forces ghosts to reach corner in scatter",
+                () => { scatterSeconds += 60; }
             ));
 
             upgradeManager.Register(new Upgrade(
