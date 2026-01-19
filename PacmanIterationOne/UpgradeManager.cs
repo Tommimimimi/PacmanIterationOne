@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace PacmanIterationOne
+namespace pIterationOne
 {
     using System;
     using System.Collections.Generic;
@@ -21,7 +21,7 @@ namespace PacmanIterationOne
 
         //how many choices to show each time
         public int ChoiceCount { get; set; } = 3;
-
+          
         //read only access for ui
         public IReadOnlyList<Upgrade> CurrentChoices => currentChoices;
         public IReadOnlyList<Upgrade> PickedUpgrades => picked;

@@ -45,12 +45,6 @@ namespace pIterationOne
             { "Clyde", false }
         };
 
-        Dictionary<Point, int> corners = new Dictionary<Point, int>
-            {
-                
-            };
-
-
         //declare empty integers to define using cellsize
         private int
             intPlayerX,
@@ -125,6 +119,37 @@ namespace pIterationOne
         //cancellation token to stop previous ghosts releasing
         private CancellationTokenSource ghostReleaseCTS;
 
+        //upgrade system management
+        private pIterationOne.UpgradeManager upgradeManager;
+        private System.Threading.ManualResetEventSlim upgradeWait = new(false);
+        private bool choosingUpgrade = false;
+        private string upgradePrompt = "";
+
+        //upgrade variable values
+        private int pelletScore = 10;
+        private float scoreMultiplier = 1f;
+        private float ghostSpeedMultiplier = 1f;
+
+        private int magnetPadding = 0;
+
+        private bool hasSprint = false;
+        private bool hasDash = false;
+        private int dashCharges = 0;
+        private int dashAddCount = 0;
+
+        private bool hasShield = false;
+        private bool shieldUsedThisMaze = false;
+
+        private bool lastChanceAvailable = false;
+
+        //phase tune
+        private int chaseSeconds = 7;
+        private int scatterSeconds = 15;
+
+        //click regions for the 3 options
+        private Rectangle[] rectUpgradeChoice = new Rectangle[3];
+
+
         public Form1()
         {
             InitializeComponent();
@@ -136,8 +161,6 @@ namespace pIterationOne
             this.DoubleBuffered = true;
             interfaceStrings = new Queue<string>(intArrayOfStrLen);
 
-            InitializeComponent();
-
             //choose random numbers for maze size
             intMazeX = rnd.Next(6, 8);
             intMazeY = rnd.Next(12, 16);
@@ -145,14 +168,6 @@ namespace pIterationOne
             //make sure maze dimensions are odd numbers in order for maze pathing
             intMazeX = intMazeX * 2 + 1;
             intMazeY = intMazeY * 2 + 1;
-
-            corners = new Dictionary<Point, int>
-            {
-                { new Point(1, 1), 0 },                         //top left
-                { new Point(1, intMazeY), 1 },              //top right
-                { new Point(intMazeX, 1), 2 },              //bottom left
-                { new Point(intMazeX, intMazeY), 3 }    //bottom right
-            };
 
             AddStringToQueue($"1, {intMazeY - 1}\n {intMazeX - 1}, 1");
 
@@ -269,6 +284,11 @@ namespace pIterationOne
                 case Keys.R:
                     ResetGame();
                     break;
+                //dash key
+                case Keys.Space:
+                    TryDash();
+                    break;
+
 
                 //arrow key support
                 case Keys.Up:
@@ -284,7 +304,35 @@ namespace pIterationOne
                     dirNext = Direction.Right;
                     break;
             }
+            if (choosingUpgrade)
+            {
+                //support number pad and regular number keys for upgrade selection
+                if (e.KeyCode == Keys.D1 || e.KeyCode == Keys.NumPad1) 
+                { ApplyUpgradeChoice(0); return; }
+                if (e.KeyCode == Keys.D2 || e.KeyCode == Keys.NumPad2) 
+                { ApplyUpgradeChoice(1); return; }
+                if (e.KeyCode == Keys.D3 || e.KeyCode == Keys.NumPad3) 
+                { ApplyUpgradeChoice(2); return; }
+                return;
+            }
+
         }
+
+        private void Form1_MouseDown(object sender, MouseEventArgs e)
+        {
+            if (!choosingUpgrade)
+                return;
+
+            for (int i = 0; i < 3; i++)
+            {
+                if (rectUpgradeChoice[i].Contains(e.Location))
+                {
+                    ApplyUpgradeChoice(i);
+                    return;
+                }
+            }
+        }
+
 
         private void SetMazeValue()
         {
@@ -358,70 +406,56 @@ namespace pIterationOne
             {
                 for (int col = 1; col < intMazeY - 1; col++)
                 {
-                    //ignore regular maze paths
+                    //checks for wall
                     if (arrMaze[row, col] != 0)
                         continue;
 
                     int walls = 0;
 
-                    //check for where walls are
+                    //sets boolean values on surrounding walls
                     bool upWall = arrMaze[row - 1, col] == 1;
                     bool downWall = arrMaze[row + 1, col] == 1;
                     bool leftWall = arrMaze[row, col - 1] == 1;
                     bool rightWall = arrMaze[row, col + 1] == 1;
 
-                    //update counter
+                    //updates counter accordingly
                     if (upWall) walls++;
                     if (downWall) walls++;
                     if (leftWall) walls++;
                     if (rightWall) walls++;
 
-                    //ignore non dead ends
+                    //continues else wise
                     if (walls != 3)
                         continue;
 
-                    //find possible carve directions
+                    //find possible carve directions (must currently be a wall)
                     List<Direction> carveOptions = new List<Direction>(3);
                     if (upWall) carveOptions.Add(Direction.Up);
                     if (downWall) carveOptions.Add(Direction.Down);
                     if (leftWall) carveOptions.Add(Direction.Left);
                     if (rightWall) carveOptions.Add(Direction.Right);
 
-                    //remove any option that would carve into boundary
+                    //remove any option that would carve into the boundary
                     carveOptions.RemoveAll(d =>
-
-                        int nRow = row, nCol = col;
-                        switch (d)
                     {
-                            case Direction.Up: nRow = row - 1; break;
-                            case Direction.Down: nRow = row + 1; break;
-                            case Direction.Left: nCol = col - 1; break;
-                            case Direction.Right: nCol = col + 1; break;
+                        int nr = row, nc = col;
+                        switch (d)
+                        {
+                            case Direction.Up: nr = row - 1; break;
+                            case Direction.Down: nr = row + 1; break;
+                            case Direction.Left: nc = col - 1; break;
+                            case Direction.Right: nc = col + 1; break;
                         }
-                        return nRow == 0 || nRow == intMazeX - 1 || nCol == 0 || nCol == intMazeY - 1;
+                        return nr == 0 || nr == intMazeX - 1 || nc == 0 || nc == intMazeY - 1;
                     });
 
-                    //failsafe incase impossible
                     if (carveOptions.Count == 0)
                         continue;
-                                    arrMaze[row - 1, col] = 0;
+
                     //pick one randomly
                     Direction chosen = carveOptions[rnd.Next(carveOptions.Count)];
 
-                    //carve the wall
-                    switch (chosen)
-                    {
-                        case Direction.Up: arrMaze[row - 1, col] = 0; break;
-                        case Direction.Down: arrMaze[row + 1, col] = 0; break;
-                        case Direction.Left: arrMaze[row, col - 1] = 0; break;
-                        case Direction.Right: arrMaze[row, col + 1] = 0; break;
-                    if (carveOptions.Count == 0)
-                        continue;
-
-                    //pick one (random is good so mazes dont all look the same)
-                    Direction chosen = carveOptions[rnd.Next(carveOptions.Count)];
-
-                    //carve
+                    //carve path
                     switch (chosen)
                     {
                         case Direction.Up: arrMaze[row - 1, col] = 0; break;
@@ -432,6 +466,7 @@ namespace pIterationOne
                 }
             }
         }
+
         private void BoundaryReadd()
         {
             //go through each dimension setting 0 values to 1
@@ -573,6 +608,8 @@ namespace pIterationOne
             }
             g.FillEllipse(Brushes.FloralWhite, rectSpawnPoint);
             lblScore.Text = "Score: " + Convert.ToString(intScore);
+
+            DrawUpgradeOverlay(g);
         }
 
         private void DeathAnimation()
@@ -664,7 +701,8 @@ namespace pIterationOne
                     }
                     dirCurrent = Direction.None;
                     AddStringToQueue($"Player collision in ({tryX / intCellSize}, {tryY / intCellSize}) at {DateTime.Now.ToLongTimeString()}");
-                    ApplySprint();
+                    if (hasSprint)
+                    { ApplySprint(); }
                     swMouthTime.Reset();
                 }
             }
@@ -705,9 +743,29 @@ namespace pIterationOne
                     }
                     else if (arrMaze[row, col] == 2 && consumePellets)
                     {
-                        Rectangle pellet = new Rectangle(col * intCellSize + (intCellSize / 5 * 2),
-                            row * intCellSize + (intCellSize / 5 * 2),
-                            intCellSize / 5, intCellSize / 5);
+                        int baseSize = intCellSize / 5;
+                        int baseOffset = (intCellSize / 5 * 2);
+
+                        //account for magnet effect
+                        Rectangle pellet = new Rectangle(
+                            col * intCellSize + baseOffset - magnetPadding,
+                            row * intCellSize + baseOffset - magnetPadding,
+                            baseSize + (magnetPadding * 2),
+                            baseSize + (magnetPadding * 2)
+                        );
+
+                        if (rectNewEntity.IntersectsWith(pellet))
+                        {
+                            arrMaze[row, col] = 0;
+                            intPelletCount--;
+
+                            int gained = (int)Math.Round(pelletScore * scoreMultiplier);
+                            intScore += gained;
+
+                            DashAddCheck(gained);
+                        }
+
+
                         //using IntersectsWith method to check for collision
                         //returning IsValidMove as false if the intersect is true
                         if (rectNewEntity.IntersectsWith(pellet))
@@ -727,6 +785,20 @@ namespace pIterationOne
             //if none of the checks are activated
             //then it is returned as a valid move
             return true;
+        }
+
+        private void DashAddCheck(int pGained)
+        {
+            if (hasDash)
+            {
+                dashAddCount = dashAddCount + pGained;
+                if (dashAddCount >= 500)
+                {
+                    dashAddCount -= 500;
+                    dashCharges++;
+                    AddStringToQueue($"+1 dash earned, charges now {dashCharges}");
+                }
+            }
         }
 
         public bool GhostCanMoveTo(int newX, int newY, Rectangle rectGhost)
@@ -768,13 +840,17 @@ namespace pIterationOne
                     //move toward target tile
                     if (Math.Abs(targetX - ghost.X) > Math.Abs(targetY - ghost.Y))
                     {
-                        ghost.X += (int)(Math.Sign(targetX - ghost.X) * ghost.ghostSpeed);
+                        float step = ghost.ghostSpeed * ghostSpeedMultiplier;
+                        ghost.X += (int)(Math.Sign(targetX - ghost.X) * step);
+
                         if (!GhostCanMoveTo(ghost.X, ghost.Y, ghost.rectGhost))
                             ghost.X = ghost.prevX;
                     }
                     else
                     {
-                        ghost.Y += (int)(Math.Sign(targetY - ghost.Y) * ghost.ghostSpeed);
+                        float step = ghost.ghostSpeed * ghostSpeedMultiplier;
+                        ghost.Y += (int)(Math.Sign(targetY - ghost.Y) * step);
+
                         if (!GhostCanMoveTo(ghost.X, ghost.Y, ghost.rectGhost))
                             ghost.Y = ghost.prevY;
                     }
@@ -936,30 +1012,22 @@ namespace pIterationOne
             {
                 Thread.Sleep(1000);
                 intGhostPhaCount++;
-                switch (boolChase)
+                if (boolChase)
                 {
-                    case true:
-                        {
-                            //count for how many seconds ghosts are in chase
-                            if (intGhostPhaCount >= 7)
-                            {
-                                SwitchGhostPhase();
-                                intGhostPhaCount = 0;
-                            }
-                        }
-                        break;
-                    case false:
-                        {
-                            //count for how many seconds ghosts are in scatter
-                            if (intGhostPhaCount >= 15)
-                            {
-                                SwitchGhostPhase();
-                                intGhostPhaCount = 0;
-                            }
-                        }
-                        break;
+                    if (intGhostPhaCount >= chaseSeconds)
+                    {
+                        SwitchGhostPhase();
+                        intGhostPhaCount = 0;
+                    }
                 }
-
+                else
+                {
+                    if (intGhostPhaCount >= scatterSeconds)
+                    {
+                        SwitchGhostPhase();
+                        intGhostPhaCount = 0;
+                    }
+                }
             }
         }
 
@@ -1037,26 +1105,54 @@ namespace pIterationOne
 
         private void GhostCollisionCheck()
         {
+            bool hit = false;
+            string hitName = "";
+
             lock (ghostLock)
             {
                 foreach (Ghost ghost in listGhosts)
                 {
-                    //creates rectangle for each ghost
                     Rectangle rectGhost = new Rectangle(ghost.X, ghost.Y, intCellSize, intCellSize);
-                    //check collision then set flag true
-                    if (rectPlayer.IntersectsWith(rectGhost))
+
+                    if (!rectPlayer.IntersectsWith(rectGhost))
+                        continue;
+
+                    //shield blocks first hit each maze
+                    if (hasShield && !shieldUsedThisMaze)
                     {
-                        AddStringToQueue($"Collision with {ghost.name} at {DateTime.Now.ToLongTimeString()}");
-                        AddStringToQueue($"Lives are now {intPlayerLives}");
-                        boolDeath = true;
-                        break;
+                        shieldUsedThisMaze = true;
+                        AddStringToQueue($"shield blocked a hit from {ghost.name} at {DateTime.Now.ToLongTimeString()}");
+                        return;
                     }
+
+                    //last chance prevents death once per run
+                    if (lastChanceAvailable)
+                    {
+                        lastChanceAvailable = false;
+                        AddStringToQueue($"last chance saved you from {ghost.name} at {DateTime.Now.ToLongTimeString()}");
+
+                        //reset positions without losing a life
+                        OriginalPos();
+                        return;
+                    }
+
+                    //norm collision
+                    hit = true;
+                    hitName = ghost.name;
+                    break;
                 }
             }
-            //kill player after foreach to prevent list modification during loop
-            if (boolDeath)
+
+            if (hit)
+            {
+                AddStringToQueue($"collision with {hitName} at {DateTime.Now.ToLongTimeString()}");
+                AddStringToQueue($"lives are now {intPlayerLives}");
+
+                boolDeath = true;
                 PlayerDeath();
+            }
         }
+
 
         private void PlayerDeath()
         {
@@ -1096,7 +1192,10 @@ namespace pIterationOne
                 restarted = true;
 
                 //restarts the whole of the form
+                threadRunning = false;
+                ghostReleaseCTS?.Cancel();
                 Application.Restart();
+                Environment.Exit(0);
 
                 //focuses and emphasises the form giving keyboard control
                 this.BringToFront();
@@ -1120,13 +1219,242 @@ namespace pIterationOne
                 boolSprint = true;
                 int temp = intPlayerSpeed;
                 intPlayerSpeed = doubleSpeed;
-                //dash lasts for 0.6 seconds
-                await Task.Delay(1000);
+                //sprint lasts for 0.85 seconds
+                await Task.Delay(850);
                 //revert speed back to normal
                 intPlayerSpeed = temp;
                 boolSprint = false;
             }
         }
+
+        private void TryDash()
+        {
+            if (!hasDash) return;
+            if (dashCharges <= 0) return;
+            if (choosingUpgrade) return;
+
+            int dx = 0;
+            int dy = 0;
+
+            int dashTileRange = 2;
+            switch (dirCurrent)
+            {
+                case Direction.Up: dy = -dashTileRange; break;
+                case Direction.Down: dy = dashTileRange; break;
+                case Direction.Left: dx = -dashTileRange; break;
+                case Direction.Right: dx = dashTileRange; break;
+                default: return;
+            }
+
+            //dash attempt
+            int dashX = intPlayerX + (dx * intCellSize);
+            int dashY = intPlayerY + (dy * intCellSize);
+
+            if (IsValidMove(dashX, dashY, rectPlayer, true))
+            {
+                intPlayerX = dashX;
+                intPlayerY = dashY;
+                rectPlayer = new Rectangle(intPlayerX, intPlayerY, intCellSize, intCellSize);
+                dashCharges--;
+                AddStringToQueue($"dash used, charges left are: {dashCharges}");
+                Invalidate();
+            }
+        }
+
+        private void OfferUpgradeAndWait(string prompt)
+        {
+            upgradePrompt = prompt;
+
+            //roll 3 upgrades
+            upgradeManager.RollChoices();
+
+            //enter selection state
+            choosingUpgrade = true;
+
+            //reset wait handle
+            upgradeWait.Reset();
+
+            //force draw immediately
+            Invalidate();
+
+            //block only the game loop thread until the player picks
+            upgradeWait.Wait();
+
+            //exit selection state
+            choosingUpgrade = false;
+            upgradePrompt = "";
+
+            //redraw gameplay
+            Invalidate();
+        }
+
+        private void DrawUpgradeOverlay(Graphics g)
+        {
+            if (!choosingUpgrade)
+                return;
+
+            //darken screen
+            using (var overlayBrush = new SolidBrush(Color.FromArgb(180, 0, 0, 0)))
+            {
+                g.FillRectangle(overlayBrush, new Rectangle(0, 0, ClientSize.Width, ClientSize.Height));
+            }
+
+            //title text
+            using (var titleFont = new Font("Consolas", 18, FontStyle.Bold))
+            using (var bodyFont = new Font("Consolas", 11, FontStyle.Regular))
+            using (var keyFont = new Font("Consolas", 10, FontStyle.Bold))
+            using (var whiteBrush = new SolidBrush(Color.White))
+            {
+                string title = upgradePrompt.Length > 0 ? upgradePrompt : "pick an upgrade";
+                g.DrawString(title, titleFont, whiteBrush, new PointF(30, 25));
+
+                var choices = upgradeManager.CurrentChoices;
+
+                //layout
+                int boxWidth = Math.Min(520, ClientSize.Width - 60);
+                int boxHeight = 110;
+                int startX = 30;
+                int startY = 80;
+                int gap = 20;
+
+                for (int i = 0; i < 3; i++)
+                {
+                    Rectangle box = new Rectangle(startX, startY + i * (boxHeight + gap), boxWidth, boxHeight);
+                    rectUpgradeChoice[i] = box;
+
+                    //box background
+                    using (var boxBrush = new SolidBrush(Color.FromArgb(200, 25, 25, 25)))
+                    using (var borderPen = new Pen(Color.White, 2))
+                    {
+                        g.FillRectangle(boxBrush, box);
+                        g.DrawRectangle(borderPen, box);
+                    }
+
+                    //if not enough upgrades left, show empty slot
+                    if (i >= choices.Count)
+                    {
+                        g.DrawString($"[{i + 1}] no upgrade", bodyFont, whiteBrush, new PointF(box.X + 12, box.Y + 12));
+                        continue;
+                    }
+
+                    var u = choices[i];
+
+                    //name + description
+                    g.DrawString($"[{i + 1}] {u.Name}", keyFont, whiteBrush, new PointF(box.X + 12, box.Y + 10));
+                    g.DrawString(u.Description ?? "", bodyFont, whiteBrush, new RectangleF(box.X + 12, box.Y + 35, box.Width - 24, box.Height - 45));
+                }
+                g.DrawString("click an option or press 1, 2, or 3", bodyFont, whiteBrush, new PointF(30, ClientSize.Height - 35));
+            }
+        }
+
+        private void ApplyUpgradeChoice(int index)
+        {
+            bool ok = upgradeManager.Pick(index);
+            if (ok && upgradeManager.PickedUpgrades.Count > 0)
+            {
+                var last = upgradeManager.PickedUpgrades.Last();
+                AddStringToQueue($"picked upgrade: {last.Name} at {DateTime.Now.ToLongTimeString()}");
+            }
+            else
+            {
+                AddStringToQueue($"upgrade pick failed at {DateTime.Now.ToLongTimeString()}");
+            }
+
+            //release the game loop
+            upgradeWait.Set();
+        }
+
+        private void RegisterUpgrades()
+        {
+            upgradeManager = new UpgradeManager();
+
+            upgradeManager.Register(new Upgrade(
+                UpgradeType.sprint,
+                "rage sprint",
+                "after pacman crashes into a wall he sprints at x2 speed for  ",
+                () => { hasSprint = true; },
+                stackable: true,
+                maxStacks: 3
+            ));
+
+            upgradeManager.Register(new Upgrade(
+                UpgradeType.dash,
+                "dash",
+                "press space to dash forward 2 tiles, starts with 1 charge and gains one extra charge every time you reach 1000 extra score from this point",
+                () => { hasDash = true; dashCharges = 1; }
+            ));
+
+            upgradeManager.Register(new Upgrade(
+                UpgradeType.shield,
+                "shield",
+                "block the first ghost hit each maze",
+                () => { hasShield = true; shieldUsedThisMaze = false; }
+            ));
+
+            upgradeManager.Register(new Upgrade(
+                UpgradeType.extralife,
+                "vitality",
+                "+1 life, you can pick this up to x3 times",
+                () => { intPlayerLives += 1; },
+                stackable: true,
+                maxStacks: 3
+            ));
+
+            upgradeManager.Register(new Upgrade(
+                UpgradeType.slowghost,
+                "thwarter",
+                "ghosts move 10% slower (stacks x3)",
+                () => { ghostSpeedMultiplier *= 0.90f; },
+                stackable: true,
+                maxStacks: 3
+            ));
+
+            upgradeManager.Register(new Upgrade(
+                UpgradeType.phasedelay,
+                "phase delay",
+                "scatter lasts +3 seconds (stacks x3)",
+                () => { scatterSeconds += 3; },
+                stackable: true,
+                maxStacks: 3
+            ));
+
+            upgradeManager.Register(new Upgrade(
+                UpgradeType.scoremult,
+                "cherish",
+                "pellets give +20% score (stacks x2)",
+                () => { scoreMultiplier += 0.2f; },
+                stackable: true,
+                maxStacks: 2
+            ));
+
+            upgradeManager.Register(new Upgrade(
+                UpgradeType.greed,
+                "greed",
+                "+50% extra score but ghosts navigate the maze 15% faster",
+                () =>
+                {
+                    scoreMultiplier += 0.50f;
+                    ghostSpeedMultiplier *= 1.15f;
+                }
+            ));
+
+            upgradeManager.Register(new Upgrade(
+                UpgradeType.magnet,
+                "magnetism",
+                "wider pellet pickup, will allow you to not have to navigate as much of the maze (stacks x2)",
+                () => { magnetPadding += intCellSize; },
+                stackable: true,
+                maxStacks: 2
+            ));
+
+            upgradeManager.Register(new Upgrade(
+                UpgradeType.lastchance,
+                "guardian angel",
+                "avoid a death scenario one time per run",
+                () => { lastChanceAvailable = true; }
+            ));
+        }
+
 
         private void ShowGetReady(int milliseconds)
         {
@@ -1147,22 +1475,39 @@ namespace pIterationOne
         private void GameLoop()
         {
             MazeCreate();
-            //1.5 second delay
+            RegisterUpgrades();
+
+            //starting upgrade choice
+            OfferUpgradeAndWait("pick your starting upgrade");
+
+            //per maze consumables should start fresh
+            shieldUsedThisMaze = false;
+            if (hasDash) dashCharges = 1;
+
+            //get ready pause before starting
             ShowGetReady(1500);
+
+            //start ghost release after the first choice
+            SpawnGhosts();
 
             while (threadRunning)
             {
                 MovePlayer();
                 SpawnGhosts();
                 MoveGhosts();
-                //if (boolCollision) GhostCollisionCheck();
+
+                if (boolCollision)
+                    GhostCollisionCheck();
+
                 UpdateGhostChasePoints();
+
                 lock (ghostLock)
                 {
                     foreach (Ghost ghost in listGhosts)
                     {
-                        if (ghost.X / intCellSize == ghost.chasePoint.X && ghost.Y / intCellSize == ghost.chasePoint.Y
-                        && ghost.currPhase == Ghost.Phases.Scatter)
+                        if (ghost.X / intCellSize == ghost.chasePoint.X &&
+                            ghost.Y / intCellSize == ghost.chasePoint.Y &&
+                            ghost.currPhase == Ghost.Phases.Scatter)
                         {
                             ghost.currPhase = Ghost.Phases.Chase;
                             AddStringToQueue($"{ghost.name} reached their scatter corner, phase is now " +
@@ -1170,35 +1515,40 @@ namespace pIterationOne
                         }
                     }
                 }
-                UpdateTerminal();
-                fltMouthAngle = (float)swMouthTime.Elapsed.TotalSeconds * 7;
-                if (intPelletCount <= 0)
-                {
-                    //death = true to play animation and turn off
-                    //collision so only one life is removed
-                    boolDeath = true;
-                    boolCollision = false;
-                    fltDeathAngle = 0;
-                    swMouthTime.Reset();
 
-                    intPelletCount = 0;
+                UpdateTerminal();
+
+                fltMouthAngle = (float)swMouthTime.Elapsed.TotalSeconds * 7;
+
+                //maze complete -> upgrade -> next maze
+                if (intPelletCount == 0)
+                {
+                    //stop collisions during transition
+                    boolCollision = false;
+
+                    OfferUpgradeAndWait("maze cleared - pick an upgrade");
+
+                    //reset per maze consumables
+                    shieldUsedThisMaze = false;
+                    if (hasDash) dashCharges = 1;
+
+                    //reset positions and build next maze
+                    OriginalPos();
                     MazeCreate();
 
-                    //play animation
-                    DeathAnimation();
-
-                    //reset original positions and make death false
-                    //for normal animation and add back collision
-                    OriginalPos();
-                    boolDeath = false;
-                    boolCollision = true;
-                    //allow ghosts to respawn
+                    //allow ghost release sequence again
                     boolGhosts = false;
+                    SpawnGhosts();
+
+                    //re-enable collisions after transition
+                    boolCollision = true;
                 }
+
                 Thread.Sleep(20);
                 Invalidate();
             }
             return;
         }
+
     }
 }

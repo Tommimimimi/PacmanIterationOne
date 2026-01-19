@@ -40,6 +40,7 @@
             FormClosing += CloseForm;
             Shown += Form1_Shown;
             KeyDown += KeyDownEvent;
+            MouseDown += Form1_MouseDown;
             ResumeLayout(false);
         }
 

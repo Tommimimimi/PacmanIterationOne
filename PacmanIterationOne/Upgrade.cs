@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace PacmanIterationOne
+namespace pIterationOne
 {
     //defines all possible roguelike upgrade types used in the game
     public enum UpgradeType
