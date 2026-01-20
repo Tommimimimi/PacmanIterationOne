@@ -693,16 +693,17 @@ namespace pIterationOne
                 {
                     if (intPlayerX % intCellSize != 0)
                     {
-                        CentrePlayer(ref intPlayerX);
+                        CentreToGrid(ref intPlayerX);
                     }
                     if (intPlayerY % intCellSize != 0)
                     {
-                        CentrePlayer(ref intPlayerY);
+                        CentreToGrid(ref intPlayerY);
                     }
                     dirCurrent = Direction.None;
                     AddStringToQueue($"Player collision in ({tryX / intCellSize}, {tryY / intCellSize}) at {DateTime.Now.ToLongTimeString()}");
                     if (hasSprint)
                     { ApplySprint(); }
+                    TimeStop();
                     swMouthTime.Reset();
                 }
             }
@@ -712,7 +713,7 @@ namespace pIterationOne
             Invalidate();
         }
 
-        public void CentrePlayer(ref int pInt)
+        public void CentreToGrid(ref int pInt)
         {
             int nearestCell = (int)(Math.Floor(pInt / (float)intCellSize));
             nearestCell++;
@@ -757,22 +758,13 @@ namespace pIterationOne
                         if (rectNewEntity.IntersectsWith(pellet))
                         {
                             arrMaze[row, col] = 0;
-                            intPelletCount--;
-
+                            AddStringToQueue($"Pellet consumed at ({col}, {row}) - {intPelletCount} remaining");
+                            
                             int gained = (int)Math.Round(pelletScore * scoreMultiplier);
                             intScore += gained;
-
-                            DashAddCheck(gained);
-                        }
-
-
-                        //using IntersectsWith method to check for collision
-                        //returning IsValidMove as false if the intersect is true
-                        if (rectNewEntity.IntersectsWith(pellet))
-                        {
                             arrMaze[row, col] = 0;
                             intPelletCount--;
-                            intScore += 10;
+                            DashAddCheck(gained);
                         }
                     }
                 }
@@ -1364,6 +1356,34 @@ namespace pIterationOne
             upgradeWait.Set();
         }
 
+        private void FreezeGhost()
+        {         
+            foreach (Ghost ghost in listGhosts)
+            {
+                ghost.ghostSpeed = 0;
+            }
+        }
+
+        private void UnfreezeGhost()
+        {
+            foreach (Ghost ghost in listGhosts)
+            {
+                ghost.ghostSpeed = intCellSize / 8;
+            }
+        }
+
+        private async void TimeStop()
+        {
+            foreach (Ghost ghost in listGhosts)
+            {
+                CentreToGrid(ref ghost.X);
+                CentreToGrid(ref ghost.Y);
+            }
+            FreezeGhost();
+            await Task.Delay(500);
+            UnfreezeGhost();
+        }
+
         private void RegisterUpgrades()
         {
             upgradeManager = new UpgradeManager();
@@ -1495,7 +1515,7 @@ namespace pIterationOne
                 MoveGhosts();
 
                 if (boolCollision)
-                    GhostCollisionCheck();
+                    //GhostCollisionCheck();
 
                 UpdateGhostChasePoints();
 
@@ -1518,7 +1538,6 @@ namespace pIterationOne
 
                 fltMouthAngle = (float)swMouthTime.Elapsed.TotalSeconds * 7;
 
-                //maze complete -> upgrade -> next maze
                 if (intPelletCount == 0)
                 {
                     //stop collisions during transition
@@ -1538,7 +1557,7 @@ namespace pIterationOne
                     boolGhosts = false;
                     SpawnGhosts();
 
-                    //re-enable collisions after transition
+                    //reenable collisions after transition
                     boolCollision = true;
                 }
 
