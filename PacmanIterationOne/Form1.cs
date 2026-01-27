@@ -78,8 +78,8 @@ namespace pIterationOne
 
         //declare current and next direction variables
         Direction
-            dirCurrent = Direction.None,
-            dirNext = Direction.None;
+            dirCurrent,
+            dirNext;
 
         //declare booleans
         bool
@@ -91,6 +91,7 @@ namespace pIterationOne
             boolReady = false,
             boolSprint = false,
             restarted = false;
+
 
         //declare threads
         Thread
@@ -582,6 +583,10 @@ namespace pIterationOne
             {
                 //angles for death animation
                 mouthAngle = fltDeathAngle;
+            }
+            else if (!boolReady)
+            {
+                mouthAngle = 0;
             }
             else
             {
@@ -1341,8 +1346,8 @@ namespace pIterationOne
 
         private void ApplyUpgradeChoice(int index)
         {
-            bool ok = upgradeManager.Pick(index);
-            if (ok && upgradeManager.PickedUpgrades.Count > 0)
+            bool valid = upgradeManager.Pick(index);
+            if (valid && upgradeManager.PickedUpgrades.Count > 0)
             {
                 var last = upgradeManager.PickedUpgrades.Last();
                 AddStringToQueue($"picked upgrade: {last.Name} at {DateTime.Now.ToLongTimeString()}");
@@ -1376,8 +1381,7 @@ namespace pIterationOne
         {
             foreach (Ghost ghost in listGhosts)
             {
-                CentreToGrid(ref ghost.X);
-                CentreToGrid(ref ghost.Y);
+                
             }
             FreezeGhost();
             await Task.Delay(500);
@@ -1400,7 +1404,8 @@ namespace pIterationOne
             upgradeManager.Register(new Upgrade(
                 UpgradeType.dash,
                 "dash",
-                "press space to dash forward 2 tiles, starts with 1 charge and gains one extra charge every time you reach 1000 extra score from this point",
+                "press space to dash forward 2 tiles, starts with 1 charge and gains " +
+                "one extra charge every time you reach 500 extra score from this point",
                 () => { hasDash = true; dashCharges = 1; }
             ));
 
@@ -1423,10 +1428,10 @@ namespace pIterationOne
             upgradeManager.Register(new Upgrade(
                 UpgradeType.slowghost,
                 "thwart'r",
-                "ghosts move 10% slower (stacks x3)",
-                () => { ghostSpeedMultiplier *= 0.90f; },
+                "ghosts move 20% slower (stacks x2)",
+                () => { ghostSpeedMultiplier *= 0.8f; },
                 stackable: true,
-                maxStacks: 3
+                maxStacks: 2
             ));
 
             upgradeManager.Register(new Upgrade(
@@ -1490,6 +1495,21 @@ namespace pIterationOne
             boolReady = true;
         }
 
+        private void StartingMovement()
+        {
+            Random rnd = new Random();
+            int i = rnd.Next(1, 2);
+            if (i == 1)
+            {
+                dirCurrent = Direction.Down;
+            }
+            else
+            {
+                dirCurrent = Direction.Right;
+            }
+            swMouthTime.Start();
+        }
+
         private void GameLoop()
         {
             MazeCreate();
@@ -1507,6 +1527,7 @@ namespace pIterationOne
 
             //start ghost release after the first choice
             SpawnGhosts();
+            StartingMovement();
 
             while (threadRunning)
             {
@@ -1550,8 +1571,8 @@ namespace pIterationOne
                     if (hasDash) dashCharges = 1;
 
                     //reset positions and build next maze
-                    OriginalPos();
                     MazeCreate();
+                    OriginalPos();
 
                     //allow ghost release sequence again
                     boolGhosts = false;
