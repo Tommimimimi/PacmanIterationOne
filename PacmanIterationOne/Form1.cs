@@ -1396,9 +1396,7 @@ namespace pIterationOne
                 UpgradeType.sprint,
                 "rage sprint",
                 "after pacman crashes into a wall he sprints at x2 speed for 0.85 seconds",
-                () => { hasSprint = true; },
-                stackable: true,
-                maxStacks: 3
+                () => { hasSprint = true; }
             ));
 
             upgradeManager.Register(new Upgrade(
@@ -1497,16 +1495,7 @@ namespace pIterationOne
 
         private void StartingMovement()
         {
-            Random rnd = new Random();
-            int i = rnd.Next(1, 2);
-            if (i == 1)
-            {
-                dirCurrent = Direction.Down;
-            }
-            else
-            {
-                dirCurrent = Direction.Right;
-            }
+            dirCurrent = Direction.Right;
             swMouthTime.Start();
         }
 
@@ -1536,7 +1525,7 @@ namespace pIterationOne
                 MoveGhosts();
 
                 if (boolCollision)
-                    //GhostCollisionCheck();
+                    GhostCollisionCheck();
 
                 UpdateGhostChasePoints();
 
