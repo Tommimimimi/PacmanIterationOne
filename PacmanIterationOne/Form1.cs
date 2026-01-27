@@ -1216,8 +1216,8 @@ namespace pIterationOne
                 boolSprint = true;
                 int temp = intPlayerSpeed;
                 intPlayerSpeed = doubleSpeed;
-                //sprint lasts for 0.85 seconds
-                await Task.Delay(850);
+                //sprint lasts for 0.75 seconds
+                await Task.Delay(750);
                 //revert speed back to normal
                 intPlayerSpeed = temp;
                 boolSprint = false;
@@ -1402,9 +1402,9 @@ namespace pIterationOne
             upgradeManager.Register(new Upgrade(
                 UpgradeType.dash,
                 "dash",
-                "press space to dash forward 2 tiles, starts with 1 charge and gains " +
+                "press space to dash forward 2 tiles, starts with 2 charges and gains " +
                 "one extra charge every time you reach 500 extra score from this point",
-                () => { hasDash = true; dashCharges = 1; }
+                () => { hasDash = true; dashCharges = 2; }
             ));
 
             upgradeManager.Register(new Upgrade(
@@ -1417,10 +1417,10 @@ namespace pIterationOne
             upgradeManager.Register(new Upgrade(
                 UpgradeType.extralife,
                 "vitality",
-                "+1 life, you can pick this up to x3 times",
+                "+2 life, you can pick this up to x2 times",
                 () => { intPlayerLives += 1; },
                 stackable: true,
-                maxStacks: 3
+                maxStacks: 2
             ));
 
             upgradeManager.Register(new Upgrade(
@@ -1442,8 +1442,8 @@ namespace pIterationOne
             upgradeManager.Register(new Upgrade(
                 UpgradeType.scoremult,
                 "cherish",
-                "pellets give +20% score (stacks x2)",
-                () => { scoreMultiplier += 0.2f; },
+                "pellets give +25% score (stacks x2)",
+                () => { scoreMultiplier += 0.25f; },
                 stackable: true,
                 maxStacks: 2
             ));
@@ -1509,7 +1509,7 @@ namespace pIterationOne
 
             //per maze consumables should start fresh
             shieldUsedThisMaze = false;
-            if (hasDash) dashCharges = 1;
+            if (hasDash) dashCharges = 2;
 
             //get ready pause before starting
             ShowGetReady(1500);
