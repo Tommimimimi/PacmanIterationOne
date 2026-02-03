@@ -62,7 +62,6 @@ namespace pIterationOne
             intGhostPhaCount,
             intPlayerLives,
             intPelletCount,
-            intSprintDuration = 5000,
             intDisposeCount;
 
         //define empty maze
@@ -243,6 +242,7 @@ namespace pIterationOne
         {
             //exit threads for smooth shutdown
             threadRunning = false;
+            Application.Exit();
         }
 
         private void Form1_Shown(object sender, EventArgs e)
@@ -708,7 +708,7 @@ namespace pIterationOne
                     AddStringToQueue($"Player collision in ({tryX / intCellSize}, {tryY / intCellSize}) at {DateTime.Now.ToLongTimeString()}");
                     if (hasSprint)
                     { ApplySprint(); }
-                    TimeStop();
+                    //TimeStop();
                     swMouthTime.Reset();
                 }
             }
