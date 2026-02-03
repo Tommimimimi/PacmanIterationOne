@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Numerics;
 using System.Diagnostics;
 using pIterationOne;
+using PacmanIterationOne;
 
 namespace pIterationOne
 {
@@ -321,6 +322,7 @@ namespace pIterationOne
 
         private void Form1_MouseDown(object sender, MouseEventArgs e)
         {
+            AddStringToQueue(FileManager.BaseFolderDirectory());
             if (!choosingUpgrade)
                 return;
 
@@ -1501,6 +1503,7 @@ namespace pIterationOne
 
         private void GameLoop()
         {
+            FileManager.CreateDir();
             MazeCreate();
             RegisterUpgrades();
 
