@@ -21,7 +21,7 @@ namespace PacmanIterationOne
         }
 
 
-        private static readonly string LeaderBoard = BaseFolderDirectory() + "LeaderBoard.Json";
+        private static readonly string LeaderBoard = BaseFolderDirectory() + @"\LeaderBoard.Json";
 
         private static JsonSerializerOptions jsonConfig = new JsonSerializerOptions
         {
@@ -34,12 +34,11 @@ namespace PacmanIterationOne
 
         public static void CreateDir()
         {
-            if (!File.Exists(LeaderBoard))
-            {
-                MessageBox.Show("leaderboard file found");
-                return; }
-            else { MessageBox.Show("Leaderboard file not found, creating new file...");
-                File.Create(LeaderBoard); }
+            //leaderboard file found
+            if (File.Exists(LeaderBoard))
+            { return; }
+            //leaderboard file not found, creating new file 
+            else { File.Create(LeaderBoard); }
         }
     }
 }
