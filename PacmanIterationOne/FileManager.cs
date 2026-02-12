@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -11,6 +12,9 @@ namespace PacmanIterationOne
 {
     internal class FileManager
     {
+        List<String> leaderBoardEntries = new List<String>();
+        String jsonStr = File.ReadAllText(LeaderBoard);
+        
         public static string BaseFolderDirectory()
         {
         DirectoryInfo? directory = Directory.GetParent(AppContext.BaseDirectory).Parent.Parent.Parent;
@@ -39,6 +43,12 @@ namespace PacmanIterationOne
             { return; }
             //leaderboard file not found, creating new file 
             else { File.Create(LeaderBoard); }
+        }
+        public static void WriteToFile(string pStr)
+        {
+            string jsonString = JsonSerializer.Serialize(pStr, jsonConfig);
+            using (StreamWriter writer = new StreamWriter(LeaderBoard,false))
+            { writer.Write(jsonString); }
         }
     }
 }

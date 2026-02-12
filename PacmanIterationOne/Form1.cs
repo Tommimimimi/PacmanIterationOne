@@ -114,6 +114,7 @@ namespace pIterationOne
         Brush brush = new SolidBrush(Color.FromArgb(200, 20, 20, 20));
         Stopwatch swMouthTime = new Stopwatch();
         Form Interface = new Form();
+        Form MainMenu = new Form();
         Queue<string> interfaceStrings;
         Random rnd = new Random();
 
@@ -154,7 +155,7 @@ namespace pIterationOne
         public Form1()
         {
             InitializeComponent();
-            StartGame();
+            MainMenu.Show();
         }
 
         private void StartGame()
@@ -186,8 +187,6 @@ namespace pIterationOne
 
             ghostReleaseCTS = new CancellationTokenSource();
 
-            ghostReleaseCTS = new CancellationTokenSource();
-
             //creating the label and setting attributes
             lblScore.Size = new Size(intCellSize * 10, intCellSize);
             lblScore.Font = new Font("Comic Sans MS", 20);
@@ -197,6 +196,15 @@ namespace pIterationOne
 
             //set point of form to right
             this.Location = new Point(Screen.FromControl(this).Bounds.Right - this.Width, 0);
+
+            //main menu setup
+            MainMenu.Text = "Main Menu";
+            MainMenu.Size = new Size(400, 300);
+            MainMenu.StartPosition = FormStartPosition.CenterScreen;
+            MainMenu.BackColor = Color.DarkBlue;
+            MainMenu.FormBorderStyle = FormBorderStyle.None;
+
+            MainMenu.Show();
 
             //interface set up
             Interface.Text = "Interface";
@@ -237,6 +245,11 @@ namespace pIterationOne
             //bring and focus front
             this.BringToFront();
             this.Focus();
+        }
+
+        private void MainMenu_Shown(object? sender, EventArgs e)
+        {
+            throw new NotImplementedException();
         }
 
         private void CloseForm(object sender, FormClosingEventArgs e)
@@ -550,7 +563,7 @@ namespace pIterationOne
             AddStringToQueue($"Brush created with R {R} G {G} B {B} at {DateTime.Now.ToLongTimeString()}");
             brush = new SolidBrush(Color.FromArgb(200, R, G, B));
         }
-
+        
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
@@ -598,7 +611,7 @@ namespace pIterationOne
 
             for (int i = 0; i < intPlayerLives; i++)
             {
-                g.FillPie(Brushes.Yellow, i * (intCellSize + 10) + 10, 0, intCellSize, intCellSize, directionAngle[dirCurrent] + mouthAngle, 360 - (2 * mouthAngle));
+                g.FillPie(Brushes.Yellow, i * intCellSize, 0, intCellSize, intCellSize, 30, 300);
             }
 
             //draw pacman on top
@@ -719,6 +732,7 @@ namespace pIterationOne
             //force refresh
             Invalidate();
         }
+        
 
         public void CentreToGrid(ref int pInt)
         {
@@ -1129,13 +1143,12 @@ namespace pIterationOne
                     {
                         lastChanceAvailable = false;
                         AddStringToQueue($"last chance saved you from {ghost.name} at {DateTime.Now.ToLongTimeString()}");
-
-                        //reset positions without losing a life
-                        OriginalPos();
+                        intPlayerLives++;
+                        PlayerDeath();
                         return;
                     }
 
-                    //norm collision
+                    //normal collision
                     hit = true;
                     hitName = ghost.name;
                     break;
@@ -1168,6 +1181,7 @@ namespace pIterationOne
             //remove life and check to see if game over
             if (--intPlayerLives <= 0)
             {
+                FileManager.WriteToFile(Convert.ToString(intScore));
                 ResetGame();
                 return;
             }
