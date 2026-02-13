@@ -189,10 +189,10 @@ namespace pIterationOne
 
             //creating the label and setting attributes
             lblScore.Size = new Size(intCellSize * 10, intCellSize);
-            lblScore.Font = new Font("Comic Sans MS", 20);
+            lblScore.Font = new Font("RETROTECH", 20);
             lblScore.BackColor = Color.Transparent;
             this.Controls.Add(lblScore);
-            lblScore.Location = new Point((intCellSize * intMazeY) - (lblScore.Width * 2), 0);
+            lblScore.Location = new Point(0, intCellSize * intMazeX - intCellSize);
 
             //set point of form to right
             this.Location = new Point(Screen.FromControl(this).Bounds.Right - this.Width, 0);
@@ -575,7 +575,7 @@ namespace pIterationOne
                 for (int col = 0; col < intMazeY; col++)
                 {
                     if (arrMaze[row, col] == 1)
-                        g.FillRectangle(brush, col * intCellSize, row * intCellSize, intCellSize, intCellSize);
+                        g.FillRectangle(Brushes.Blue, col * intCellSize, row * intCellSize, intCellSize, intCellSize);
                     else if (arrMaze[row, col] == 0)
                         g.FillRectangle(Brushes.Black, col * intCellSize, row * intCellSize, intCellSize, intCellSize);
                     //draw pellets for every 2 in the array
