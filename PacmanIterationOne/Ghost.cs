@@ -1,4 +1,5 @@
-﻿using pIterationOne;
+﻿using Microsoft.Win32;
+using pIterationOne;
 
 public class Ghost
 {
@@ -10,11 +11,12 @@ public class Ghost
             { Direction.Right, 0 },
             { Direction.None, 0 }
         };
-
+    public Random rnd = new Random();
     public int X;
     public int Y;
     public float ghostSpeed;
     public Rectangle rectGhost;
+    public Rectangle hitBox => new Rectangle(rectGhost.X + rectGhost.Height / 4, rectGhost.Y + rectGhost.Width / 4, rectGhost.Width / 2, rectGhost.Height / 2);
     public Color color;
     public string name;
     public Direction dirCurrent;
@@ -59,9 +61,9 @@ public class Ghost
         rectGhost.Height = cellSize;
     }
 
-    public void Draw(Graphics g)
+    public void Draw(Graphics g, Rectangle pRect, Color pColor)
     {
-        g.FillEllipse(new SolidBrush(color), rectGhost);
+        g.FillEllipse(new SolidBrush(pColor), pRect);
     }
     
     public void DrawAsPacman(Graphics g, Direction dir, float mouthAngle)

@@ -155,7 +155,7 @@ namespace pIterationOne
         public Form1()
         {
             InitializeComponent();
-            MainMenu.Show();
+            StartGame();
         }
 
         private void StartGame()
@@ -196,7 +196,7 @@ namespace pIterationOne
 
             //set point of form to right
             this.Location = new Point(Screen.FromControl(this).Bounds.Right - this.Width, 0);
-
+            /*
             //main menu setup
             MainMenu.Text = "Main Menu";
             MainMenu.Size = new Size(400, 300);
@@ -205,7 +205,7 @@ namespace pIterationOne
             MainMenu.FormBorderStyle = FormBorderStyle.None;
 
             MainMenu.Show();
-
+            */
             //interface set up
             Interface.Text = "Interface";
             Interface.Size = new Size(400, this.Size.Height);
@@ -1086,7 +1086,6 @@ namespace pIterationOne
             }
         }
 
-
         private void OriginalPos()
         {
             lock (ghostLock)
@@ -1125,9 +1124,7 @@ namespace pIterationOne
             {
                 foreach (Ghost ghost in listGhosts)
                 {
-                    Rectangle rectGhost = new Rectangle(ghost.X, ghost.Y, intCellSize, intCellSize);
-
-                    if (!rectPlayer.IntersectsWith(rectGhost))
+                    if (!rectPlayer.IntersectsWith(ghost.hitBox))
                         continue;
 
                     //shield blocks first hit each maze
