@@ -1,4 +1,4 @@
-﻿using System.Threading;
+using System.Threading;
 using System;
 using System.Runtime.CompilerServices;
 using System.Numerics;
@@ -51,7 +51,7 @@ namespace pIterationOne
             intPlayerX,
             intPlayerY,
             intPlayerSpeed,
-            doubleSpeed,
+            intDoubleSpeed,
             intMazeX,
             intMazeY,
             intScore,
@@ -63,7 +63,8 @@ namespace pIterationOne
             intGhostPhaCount,
             intPlayerLives,
             intPelletCount,
-            intDisposeCount;
+            intDisposeCount,
+            intMazeCount;
 
         //define empty maze
         int[,] arrMaze;
@@ -90,6 +91,7 @@ namespace pIterationOne
             boolCollision = true,
             boolReady = false,
             boolSprint = false,
+            boolPaused = false,
             restarted = false;
 
 
@@ -108,6 +110,10 @@ namespace pIterationOne
         Rectangle
             rectPlayer,
             rectSpawnPoint;
+
+        //pause menu click regions
+        Rectangle rectPauseResume = new Rectangle();
+        Rectangle rectPauseQuit   = new Rectangle();
 
         //set up resources
         List<Ghost> listGhosts = new List<Ghost>();
@@ -163,9 +169,11 @@ namespace pIterationOne
             this.DoubleBuffered = true;
             interfaceStrings = new Queue<string>(intArrayOfStrLen);
 
-            //choose random numbers for maze size
-            intMazeX = rnd.Next(6, 8);
-            intMazeY = rnd.Next(12, 16);
+            //choose random numbers for maze size using settings chosen in main menu
+            var (xMin, xMax) = GameSettings.GetMazeXRange();
+            var (yMin, yMax) = GameSettings.GetMazeYRange();
+            intMazeX = rnd.Next(xMin, xMax);
+            intMazeY = rnd.Next(yMin, yMax);
 
             //make sure maze dimensions are odd numbers in order for maze pathing
             intMazeX = intMazeX * 2 + 1;
@@ -181,7 +189,7 @@ namespace pIterationOne
             intPlayerX = intCellSize;
             intPlayerY = intCellSize;
             intPlayerSpeed = intCellSize / 8;
-            doubleSpeed = intPlayerSpeed * 2;
+            intDoubleSpeed = intPlayerSpeed * 2;
             rectPlayer = new Rectangle(intPlayerX, intPlayerY, intCellSize, intCellSize);
             intPlayerLives = 3;
 
@@ -196,41 +204,38 @@ namespace pIterationOne
 
             //set point of form to right
             this.Location = new Point(Screen.FromControl(this).Bounds.Right - this.Width, 0);
-            /*
-            //main menu setup
-            MainMenu.Text = "Main Menu";
-            MainMenu.Size = new Size(400, 300);
-            MainMenu.StartPosition = FormStartPosition.CenterScreen;
-            MainMenu.BackColor = Color.DarkBlue;
-            MainMenu.FormBorderStyle = FormBorderStyle.None;
 
-            MainMenu.Show();
-            */
-            //interface set up
-            Interface.Text = "Interface";
-            Interface.Size = new Size(400, this.Size.Height);
-            Interface.StartPosition = FormStartPosition.Manual;
-            Interface.BackColor = Color.Black;
-            Interface.ControlBox = false;
-            Interface.FormBorderStyle = FormBorderStyle.None;
-            Interface.Shown += (s, e) =>
+            //only set up and show the debug interface if enabled in options
+            //setting it up regardless and then not calling Show() can still cause
+            //the form to appear when things like Invoke or TopMost are touched
+            if (GameSettings.ShowDebugPanel)
             {
-                Interface.Location = new Point(this.Left - Interface.Width, this.Top);
-            };
+                //interface set up
+                Interface.Text = "Interface";
+                Interface.Size = new Size(400, this.Size.Height);
+                Interface.StartPosition = FormStartPosition.Manual;
+                Interface.BackColor = Color.Black;
+                Interface.ControlBox = false;
+                Interface.FormBorderStyle = FormBorderStyle.None;
+                Interface.Shown += (s, e) =>
+                {
+                    Interface.Location = new Point(this.Left - Interface.Width, this.Top);
+                };
 
-            //setting label for interface to add text
-            lblInterface = new Label();
-            lblInterface.Location = new Point(0, 0);
-            lblInterface.Size = new Size(Interface.ClientSize.Width, Interface.ClientSize.Height);
-            lblInterface.Font = new Font("Consolas", 10);
-            lblInterface.ForeColor = Color.Lime;
-            Interface.Controls.Add(lblInterface);
+                //setting label for interface to add text
+                lblInterface = new Label();
+                lblInterface.Location = new Point(0, 0);
+                lblInterface.Size = new Size(Interface.ClientSize.Width, Interface.ClientSize.Height);
+                lblInterface.Font = new Font("Consolas", 10);
+                lblInterface.ForeColor = Color.Lime;
+                Interface.Controls.Add(lblInterface);
 
-            Interface.Show();
-            this.Move += (s, e) =>
-            {
-                Interface.Location = new Point(this.Left - Interface.Width, this.Top);
-            };
+                Interface.Show();
+                this.Move += (s, e) =>
+                {
+                    Interface.Location = new Point(this.Left - Interface.Width, this.Top);
+                };
+            }
 
             //initialize threads 
             thrdGameLoop = new Thread(GameLoop);
@@ -269,8 +274,12 @@ namespace pIterationOne
 
         private void BringFormToFront()
         {
-            this.Interface.TopMost = true;
-            this.Interface.TopMost = false;
+            //only touch the interface form if it was set up and shown
+            if (GameSettings.ShowDebugPanel)
+            {
+                this.Interface.TopMost = true;
+                this.Interface.TopMost = false;
+            }
             this.TopMost = true;
             this.TopMost = false;
             this.Activate();
@@ -279,6 +288,16 @@ namespace pIterationOne
 
         private void KeyDownEvent(object sender, KeyEventArgs e)
         {
+            //escape toggles the pause menu
+            if (e.KeyCode == Keys.Escape)
+            {
+                TogglePause();
+                return;
+            }
+
+            //block all other input while paused
+            if (boolPaused) return;
+
             switch (e.KeyCode)
             {
                 //movement up, down, left, right respectively with WASD
@@ -335,6 +354,22 @@ namespace pIterationOne
 
         private void Form1_MouseDown(object sender, MouseEventArgs e)
         {
+            //handle pause menu clicks first
+            if (boolPaused)
+            {
+                if (rectPauseResume.Contains(e.Location))
+                {
+                    TogglePause();
+                    return;
+                }
+                if (rectPauseQuit.Contains(e.Location))
+                {
+                    ResetGame();
+                    return;
+                }
+                return;
+            }
+
             AddStringToQueue(FileManager.BaseFolderDirectory());
             if (!choosingUpgrade)
                 return;
@@ -506,6 +541,9 @@ namespace pIterationOne
 
         private void PelletAdd()
         {
+            //reset pellet count before adding so it doesnt drift between mazes
+            intPelletCount = 0;
+
             //iterate through maze empty slots to set value to 2(pellets)
             for (int x = 0; x < intMazeX; x++)
             {
@@ -528,7 +566,7 @@ namespace pIterationOne
             bool suitableSpawn = false;
             while (!suitableSpawn)
             {
-                if (arrMaze[spawnX, spawnY] == 0)
+                if (arrMaze[spawnX, spawnY] == 0 || arrMaze[spawnX, spawnY] == 2)
                 {
                     arrMaze[spawnX, spawnY] = -1;
                     rectSpawnPoint = new Rectangle(spawnY * intCellSize, spawnX * intCellSize, intCellSize, intCellSize);
@@ -557,11 +595,28 @@ namespace pIterationOne
 
         private void RandomBrushColours()
         {
-            R = rnd.Next(50, 220);
-            G = rnd.Next(50, 220);
-            B = rnd.Next(50, 220);
+            //get colour from settings — preset or random system
+            Color wallColour = GameSettings.GetWallColour(rnd);
+            R = wallColour.R;
+            G = wallColour.G;
+            B = wallColour.B;
             AddStringToQueue($"Brush created with R {R} G {G} B {B} at {DateTime.Now.ToLongTimeString()}");
-            brush = new SolidBrush(Color.FromArgb(200, R, G, B));
+            brush = new SolidBrush(wallColour);
+        }
+
+        //increases difficulty slightly after each maze cleared
+        private void ApplyProgressiveDifficulty()
+        {
+            intMazeCount++;
+
+            //ghosts get slightly faster each maze
+            ghostSpeedMultiplier += 0.05f;
+
+            //scatter time reduces each maze so ghosts spend less time retreating
+            //capped at 5 seconds so the game doesnt become impossible
+            scatterSeconds = Math.Max(5, scatterSeconds - 1);
+
+            AddStringToQueue($"maze {intMazeCount} cleared - speed x{ghostSpeedMultiplier:F2} scatter {scatterSeconds}s");
         }
         
         protected override void OnPaint(PaintEventArgs e)
@@ -575,7 +630,7 @@ namespace pIterationOne
                 for (int col = 0; col < intMazeY; col++)
                 {
                     if (arrMaze[row, col] == 1)
-                        g.FillRectangle(Brushes.Blue, col * intCellSize, row * intCellSize, intCellSize, intCellSize);
+                        g.FillRectangle(brush, col * intCellSize, row * intCellSize, intCellSize, intCellSize);
                     else if (arrMaze[row, col] == 0)
                         g.FillRectangle(Brushes.Black, col * intCellSize, row * intCellSize, intCellSize, intCellSize);
                     //draw pellets for every 2 in the array
@@ -618,18 +673,18 @@ namespace pIterationOne
             g.FillPie(Brushes.Yellow, rectPlayer, directionAngle[dirCurrent] + mouthAngle, 360 - (2 * mouthAngle));
 
 
-            Ghost[] ghosts = [.. listGhosts];
-            lock (ghostLock)
+            //snapshot ghost list to avoid holding lock during draw calls
+            Ghost[] ghosts;
+            lock (ghostLock) { ghosts = listGhosts.ToArray(); }
+            foreach (Ghost ghost in ghosts)
             {
-                foreach (Ghost ghost in ghosts)
-                {
-                    ghost.DrawAsPacman(g, ghost.dirCurrent, mouthAngle);
-                }
+                ghost.DrawAsPacman(g, ghost.dirCurrent, mouthAngle);
             }
             g.FillEllipse(Brushes.FloralWhite, rectSpawnPoint);
             lblScore.Text = "Score: " + Convert.ToString(intScore);
 
             DrawUpgradeOverlay(g);
+            DrawPauseOverlay(g);
         }
 
         private void DeathAnimation()
@@ -723,7 +778,6 @@ namespace pIterationOne
                     AddStringToQueue($"Player collision in ({tryX / intCellSize}, {tryY / intCellSize}) at {DateTime.Now.ToLongTimeString()}");
                     if (hasSprint)
                     { ApplySprint(); }
-                    //TimeStop();
                     swMouthTime.Reset();
                 }
             }
@@ -823,58 +877,70 @@ namespace pIterationOne
         {
             Point playerTile = new Point(intPlayerX / intCellSize, intPlayerY / intCellSize);
 
-            Ghost[] ghosts = [.. listGhosts];
-            lock (ghostLock)
+            //snapshot list before iterating to avoid lock during movement
+            Ghost[] ghosts;
+            lock (ghostLock) { ghosts = listGhosts.ToArray(); }
+
+            foreach (Ghost ghost in ghosts)
             {
-                foreach (Ghost ghost in ghosts)
+                Point ghostTile = new Point(ghost.X / intCellSize, ghost.Y / intCellSize);
+
+                //Check if ghost is stuck (position didn't change)
+                bool stuck = (ghost.X == ghost.prevX && ghost.Y == ghost.prevY);
+                if (ghost.X % intCellSize == 0 && ghost.Y % intCellSize == 0 || stuck)
                 {
-                    Point ghostTile = new Point(ghost.X / intCellSize, ghost.Y / intCellSize);
-
-                    //Check if ghost is stuck (position didn't change)
-                    bool stuck = (ghost.X == ghost.prevX && ghost.Y == ghost.prevY);
-                    if (ghost.X % intCellSize == 0 && ghost.Y % intCellSize == 0 || stuck)
-                    {
-                        ghost.nextTile = BFS.GetNextTileBFS(arrMaze, ghostTile, ghost.chasePoint);
-                    }
-
-                    // Only pick a new tile if reached next tile or stuck
-                    if (stuck)
-                    {
-                        ghost.nextTile = BFS.GetNextTileBFS(arrMaze, ghostTile, ghost.chasePoint);
-                    }
-
-                    int targetX = ghost.nextTile.X * intCellSize;
-                    int targetY = ghost.nextTile.Y * intCellSize;
-
-                    //save previous position
-                    ghost.prevX = ghost.X;
-                    ghost.prevY = ghost.Y;
-
-                    //move toward target tile
-                    if (Math.Abs(targetX - ghost.X) > Math.Abs(targetY - ghost.Y))
-                    {
-                        float step = ghost.ghostSpeed * ghostSpeedMultiplier;
-                        ghost.X += (int)(Math.Sign(targetX - ghost.X) * step);
-
-                        if (!GhostCanMoveTo(ghost.X, ghost.Y, ghost.rectGhost))
-                            ghost.X = ghost.prevX;
-                    }
-                    else
-                    {
-                        float step = ghost.ghostSpeed * ghostSpeedMultiplier;
-                        ghost.Y += (int)(Math.Sign(targetY - ghost.Y) * step);
-
-                        if (!GhostCanMoveTo(ghost.X, ghost.Y, ghost.rectGhost))
-                            ghost.Y = ghost.prevY;
-                    }
-
-                    if (ghost.X > ghost.prevX) ghost.dirCurrent = Direction.Right;
-                    else if (ghost.X < ghost.prevX) ghost.dirCurrent = Direction.Left;
-                    else if (ghost.Y > ghost.prevY) ghost.dirCurrent = Direction.Down;
-                    else if (ghost.Y < ghost.prevY) ghost.dirCurrent = Direction.Up;
-
-                    ghost.UpdateRectangle();
+                    ghost.nextTile = BFS.GetNextTileBFS(arrMaze, ghostTile, ghost.chasePoint);
                 }
+
+                // Only pick a new tile if reached next tile or stuck
+                if (stuck)
+                {
+                    ghost.nextTile = BFS.GetNextTileBFS(arrMaze, ghostTile, ghost.chasePoint);
+                }
+
+                int targetX = ghost.nextTile.X * intCellSize;
+                int targetY = ghost.nextTile.Y * intCellSize;
+
+                //save previous position
+                ghost.prevX = ghost.X;
+                ghost.prevY = ghost.Y;
+
+                //move toward target tile
+                if (Math.Abs(targetX - ghost.X) > Math.Abs(targetY - ghost.Y))
+                {
+                    float step = ghost.ghostSpeed * ghostSpeedMultiplier;
+                    int diffX = targetX - ghost.X;
+
+                    //snap to target if within one step to prevent oscillation at fractional speeds
+                    if (Math.Abs(diffX) <= (int)MathF.Ceiling(step))
+                        ghost.X = targetX;
+                    else
+                        ghost.X += (int)MathF.Round(Math.Sign(diffX) * step);
+
+                    if (!GhostCanMoveTo(ghost.X, ghost.Y, ghost.rectGhost))
+                        ghost.X = ghost.prevX;
+                }
+                else
+                {
+                    float step = ghost.ghostSpeed * ghostSpeedMultiplier;
+                    int diffY = targetY - ghost.Y;
+
+                    //snap to target if within one step to prevent oscillation at fractional speeds
+                    if (Math.Abs(diffY) <= (int)MathF.Ceiling(step))
+                        ghost.Y = targetY;
+                    else
+                        ghost.Y += (int)MathF.Round(Math.Sign(diffY) * step);
+
+                    if (!GhostCanMoveTo(ghost.X, ghost.Y, ghost.rectGhost))
+                        ghost.Y = ghost.prevY;
+                }
+
+                if (ghost.X > ghost.prevX) ghost.dirCurrent = Direction.Right;
+                else if (ghost.X < ghost.prevX) ghost.dirCurrent = Direction.Left;
+                else if (ghost.Y > ghost.prevY) ghost.dirCurrent = Direction.Down;
+                else if (ghost.Y < ghost.prevY) ghost.dirCurrent = Direction.Up;
+
+                ghost.UpdateRectangle();
             }
         }
 
@@ -994,6 +1060,9 @@ namespace pIterationOne
 
         public void UpdateTerminal()
         {
+            //skip entirely if the debug panel was not set up
+            if (!GameSettings.ShowDebugPanel) return;
+
             string combined = string.Join("\n", interfaceStrings.ToArray());
 
             try
@@ -1049,9 +1118,13 @@ namespace pIterationOne
             //spawnned already
             if (ghostReleased[name]) return;
 
-            listGhosts.Add(new Ghost(rectSpawnPoint.X, rectSpawnPoint.Y,
-                GhostColors[name], arrMaze, intCellSize, name, this,
-                new Point(1, 1), Ghost.Phases.Chase));
+            //lock list when adding so it doesnt conflict with the game loop thread
+            lock (ghostLock)
+            {
+                listGhosts.Add(new Ghost(rectSpawnPoint.X, rectSpawnPoint.Y,
+                    GhostColors[name], arrMaze, intCellSize, name, this,
+                    new Point(1, 1), Ghost.Phases.Chase));
+            }
 
             //mark released
             ghostReleased[name] = true;
@@ -1117,6 +1190,9 @@ namespace pIterationOne
 
         private void GhostCollisionCheck()
         {
+            //skip if collisions are disabled during transitions or death animation
+            if (!boolCollision) return;
+
             bool hit = false;
             string hitName = "";
 
@@ -1178,8 +1254,7 @@ namespace pIterationOne
             //remove life and check to see if game over
             if (--intPlayerLives <= 0)
             {
-                FileManager.WriteToFile(Convert.ToString(intScore));
-                ResetGame();
+                GameOver();
                 return;
             }
 
@@ -1192,7 +1267,26 @@ namespace pIterationOne
             boolGhosts = false;
         }
 
+        private void GameOver()
+        {
+            //stop threads and block input
+            threadRunning = false;
+            ghostReleaseCTS?.Cancel();
 
+            //show name input and save score then show leaderboard
+            this.Invoke(() =>
+            {
+                NameInputForm nameForm = new NameInputForm(intScore);
+                nameForm.ShowDialog();
+
+                FileManager.AppendScore(nameForm.PlayerName, intScore);
+
+                Interface.Close();
+                LeaderboardForm lb = new LeaderboardForm();
+                lb.Show();
+                this.Close();
+            });
+        }
 
         private void ResetGame()
         {
@@ -1201,15 +1295,19 @@ namespace pIterationOne
                 //ensures restart only occurs once
                 restarted = true;
 
-                //restarts the whole of the form
+                //stop all threads and cancel ghost release
                 threadRunning = false;
                 ghostReleaseCTS?.Cancel();
-                Application.Restart();
-                Environment.Exit(0);
 
-                //focuses and emphasises the form giving keyboard control
-                this.BringToFront();
-                this.Focus();
+                //close this form and return to the main menu rather than
+                //restarting the process so GameSettings values are kept
+                this.Invoke(() =>
+                {
+                    Interface.Close();
+                    MainMenuForm menu = new MainMenuForm();
+                    menu.Show();
+                    this.Close();
+                });
             }
         }
 
@@ -1228,7 +1326,7 @@ namespace pIterationOne
             {
                 boolSprint = true;
                 int temp = intPlayerSpeed;
-                intPlayerSpeed = doubleSpeed;
+                intPlayerSpeed = intDoubleSpeed;
                 //sprint lasts for 0.75 seconds
                 await Task.Delay(750);
                 //revert speed back to normal
@@ -1268,6 +1366,64 @@ namespace pIterationOne
                 dashCharges--;
                 AddStringToQueue($"dash used, charges left are: {dashCharges}");
                 Invalidate();
+            }
+        }
+
+        private void TogglePause()
+        {
+            //cant pause during upgrade selection or death animation
+            if (choosingUpgrade || boolDeath) return;
+            boolPaused = !boolPaused;
+            Invalidate();
+        }
+
+        private void DrawPauseOverlay(Graphics g)
+        {
+            if (!boolPaused) return;
+
+            //darken screen
+            using (var overlayBrush = new SolidBrush(Color.FromArgb(190, 0, 0, 0)))
+            {
+                g.FillRectangle(overlayBrush, new Rectangle(0, 0, ClientSize.Width, ClientSize.Height));
+            }
+
+            using (var titleFont = new Font("RETROTECH", 28, FontStyle.Regular))
+            using (var bodyFont  = new Font("Consolas", 13, FontStyle.Regular))
+            using (var whiteBrush = new SolidBrush(Color.White))
+            {
+                //paused title
+                g.DrawString("PAUSED", titleFont, new SolidBrush(Color.Yellow),
+                    new PointF(ClientSize.Width / 2f - 80, ClientSize.Height / 2f - 120));
+
+                //resume button box
+                rectPauseResume = new Rectangle(ClientSize.Width / 2 - 100, ClientSize.Height / 2 - 30, 200, 48);
+                using (var boxBrush  = new SolidBrush(Color.FromArgb(200, 25, 25, 25)))
+                using (var borderPen = new Pen(Color.White, 2))
+                {
+                    g.FillRectangle(boxBrush, rectPauseResume);
+                    g.DrawRectangle(borderPen, rectPauseResume);
+                }
+                g.DrawString("resume", bodyFont, whiteBrush,
+                    new PointF(rectPauseResume.X + 42, rectPauseResume.Y + 12));
+
+                //quit to menu button box
+                rectPauseQuit = new Rectangle(ClientSize.Width / 2 - 100, ClientSize.Height / 2 + 38, 200, 48);
+                using (var boxBrush  = new SolidBrush(Color.FromArgb(200, 25, 25, 25)))
+                using (var borderPen = new Pen(Color.White, 2))
+                {
+                    g.FillRectangle(boxBrush, rectPauseQuit);
+                    g.DrawRectangle(borderPen, rectPauseQuit);
+                }
+                g.DrawString("quit to menu", bodyFont, whiteBrush,
+                    new PointF(rectPauseQuit.X + 12, rectPauseQuit.Y + 12));
+
+                //hint text
+                using (var hintFont = new Font("Consolas", 9))
+                using (var greyBrush = new SolidBrush(Color.FromArgb(150, 150, 150)))
+                {
+                    g.DrawString("press escape to resume", hintFont, greyBrush,
+                        new PointF(ClientSize.Width / 2f - 75, ClientSize.Height / 2f + 100));
+                }
             }
         }
 
@@ -1392,10 +1548,6 @@ namespace pIterationOne
 
         private async void TimeStop()
         {
-            foreach (Ghost ghost in listGhosts)
-            {
-                
-            }
             FreezeGhost();
             await Task.Delay(500);
             UnfreezeGhost();
@@ -1517,6 +1669,11 @@ namespace pIterationOne
             FileManager.CreateDir();
             MazeCreate();
             RegisterUpgrades();
+           
+            //apply difficulty settings from the main menu
+            ghostSpeedMultiplier = GameSettings.GetGhostSpeedMultiplier();
+            chaseSeconds         = GameSettings.GetChaseSeconds();
+            scatterSeconds       = GameSettings.GetScatterSeconds();
 
             //starting upgrade choice
             OfferUpgradeAndWait("pick your starting upgrade");
@@ -1534,10 +1691,18 @@ namespace pIterationOne
 
             while (threadRunning)
             {
+                //game loop pauses here when player presses escape
+                if (boolPaused)
+                {
+                    Thread.Sleep(50);
+                    continue;
+                }
+
                 MovePlayer();
                 SpawnGhosts();
                 MoveGhosts();
 
+                //ghost collision check re-enabled
                 if (boolCollision)
                     GhostCollisionCheck();
 
@@ -1566,6 +1731,10 @@ namespace pIterationOne
                 {
                     //stop collisions during transition
                     boolCollision = false;
+
+                    //bump difficulty and save score before offering upgrade
+                    ApplyProgressiveDifficulty();
+                    FileManager.AppendScore("(maze clear)", intScore);
 
                     OfferUpgradeAndWait("maze cleared - pick an upgrade");
 
