@@ -925,7 +925,8 @@ namespace pIterationOne
                     float step = ghost.ghostSpeed * ghostSpeedMultiplier;
                     int diffY = targetY - ghost.Y;
 
-                    //snap to target if within one step to prevent oscillation at fractional speeds
+                    //snap to target if within one step to prevent 
+                    // oscillation movement when moving by decimals
                     if (Math.Abs(diffY) <= (int)MathF.Ceiling(step))
                         ghost.Y = targetY;
                     else
@@ -1060,7 +1061,7 @@ namespace pIterationOne
 
         public void UpdateTerminal()
         {
-            //skip entirely if the debug panel was not set up
+            //skip entirely if debug panel was not set up
             if (!GameSettings.ShowDebugPanel) return;
 
             string combined = string.Join("\n", interfaceStrings.ToArray());
@@ -1530,29 +1531,6 @@ namespace pIterationOne
             upgradeWait.Set();
         }
 
-        private void FreezeGhost()
-        {         
-            foreach (Ghost ghost in listGhosts)
-            {
-                ghost.ghostSpeed = 0;
-            }
-        }
-
-        private void UnfreezeGhost()
-        {
-            foreach (Ghost ghost in listGhosts)
-            {
-                ghost.ghostSpeed = intCellSize / 8;
-            }
-        }
-
-        private async void TimeStop()
-        {
-            FreezeGhost();
-            await Task.Delay(500);
-            UnfreezeGhost();
-        }
-
         private void RegisterUpgrades()
         {
             upgradeManager = new UpgradeManager();
@@ -1734,9 +1712,7 @@ namespace pIterationOne
 
                     //bump difficulty and save score before offering upgrade
                     ApplyProgressiveDifficulty();
-                    FileManager.AppendScore("(maze clear)", intScore);
-
-                    OfferUpgradeAndWait("maze cleared - pick an upgrade");
+                    OfferUpgradeAndWait("maze cleared! - - pick an upgrade");
 
                     //reset per maze consumables
                     shieldUsedThisMaze = false;

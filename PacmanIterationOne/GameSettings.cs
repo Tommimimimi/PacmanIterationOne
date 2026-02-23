@@ -37,7 +37,7 @@ namespace pIterationOne
         public static DifficultyLevel Difficulty { get; set; } = DifficultyLevel.Normal;
         public static MazeSize Size { get; set; } = MazeSize.Medium;
         public static bool ShowDebugPanel { get; set; } = false;
-        public static ColourPreset WallColour { get; set; } = ColourPreset.Purple;
+        public static ColourPreset WallColour { get; set; } = ColourPreset.Random;
 
         //returns ghost speed mult based on difficulty selected
         public static float GetGhostSpeedMultiplier()

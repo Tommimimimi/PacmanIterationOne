@@ -317,7 +317,8 @@ namespace PacmanIterationOne
             return btn;
         }
 
-        //creates a smaller option toggle button (easy/normal/hard etc)
+        //creates a small option toggle button 
+        // with fixed numbers and parameters
         private Button CreateOptionButton(string text, Point location)
         {
             Button btn = new Button
@@ -329,11 +330,15 @@ namespace PacmanIterationOne
                 FlatStyle = FlatStyle.Flat,
                 Size = new Size(110, 38),
                 Location = location,
-                Cursor = Cursors.Hand
+                Cursor = Cursors.Hand   //pass in cursor so we can check hover
             };
+            //border config
             btn.FlatAppearance.BorderColor = colBorder;
             btn.FlatAppearance.BorderSize = 1;
+
+            //colour for when mouse hovers over
             btn.FlatAppearance.MouseOverBackColor = colHover;
+
             return btn;
         }
 
@@ -379,9 +384,10 @@ namespace PacmanIterationOne
             };
         }
 
-        //saves selected difficulty
+        //saves selected difficulty and handles highlighting
         private void SelectDifficulty(Button btn, GameSettings.DifficultyLevel level)
         {
+            //reset the previously selecteddifficulty colour
             if (selectedDifficulty != null)
             {
                 selectedDifficulty.BackColor = colButton;
@@ -389,11 +395,13 @@ namespace PacmanIterationOne
                 selectedDifficulty.FlatAppearance.BorderColor = colBorder;
             }
 
-            //highlight selected difficulty
+            //highlight currently selected difficulty
             selectedDifficulty = btn;
             btn.BackColor = colAccent;
             btn.ForeColor = Color.Yellow;
             btn.FlatAppearance.BorderColor = colSelected;
+
+            //sets the difficulty according to parameter of difficulty passed in
             GameSettings.Difficulty = level;
         }
 
